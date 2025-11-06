@@ -30,6 +30,8 @@ pip install linkedin-jobs-scraper
 5. Find the cookie named `li_at`
 6. Copy the **Value** of the `li_at` cookie (it will be a long string)
 
+![LinkedIn Cookie Location](linkedin_cookie.png)
+
 **Note:** Keep this cookie value private and secure. Do not share it or commit it to version control.
 
 #### Configure the cookie in your code:
