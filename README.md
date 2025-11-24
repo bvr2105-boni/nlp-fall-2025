@@ -1,5 +1,258 @@
 # nlp-fall-2025
 
+## LinkedIn Job Analysis Platform
+
+This project is an NLP-powered platform for analyzing LinkedIn job postings using advanced natural language processing techniques including Named Entity Recognition (NER), Topic Modeling, and Word Embeddings.
+
+## 🚀 Features
+
+### 1. Job Data Collection
+- **LinkedIn Job Scraper**: Automated scraping of job postings from LinkedIn
+- **70+ Job Titles**: Comprehensive coverage across multiple industries
+- **Structured Data**: Clean CSV format with job details, descriptions, and metadata
+
+### 2. NLP Analysis Tools
+- **Named Entity Recognition (NER)**: Extract skills, technologies, qualifications, and entities
+- **Topic Modeling**: Discover themes using LDA and LSA
+- **Word Embeddings**: Word2Vec and Sentence-BERT for semantic analysis
+- **Resume Matching**: Match resumes to job descriptions
+
+### 3. Interactive Dashboard
+- **Streamlit Web App**: User-friendly interface for data exploration
+- **EDA Visualizations**: Interactive charts and statistics
+- **NLP Analytics**: Run NLP models and view results
+- **Real-time Analysis**: Process job descriptions on-demand
+
+## 📁 Project Structure
+
+```
+nlp-fall-2025/
+├── app-streamlit/          # Streamlit web application
+│   ├── Home.py            # Main dashboard
+│   ├── pages/
+│   │   ├── 1_EDA.py       # Exploratory data analysis
+│   │   ├── 2_NLP_Analytics.py  # NLP analysis tools
+│   │   └── 3_Meet_Our_Team.py
+│   ├── functions/         # Helper functions
+│   │   ├── nlp_database.py      # Data loading utilities
+│   │   └── nlp_components.py    # Visualization components
+│   └── requirements-nlp.txt     # Python dependencies
+├── workspace/             # Analysis notebooks and data
+│   ├── Data/             # Job datasets
+│   ├── NER/              # Named Entity Recognition
+│   ├── Topic Modeling/   # LDA and LSA implementations
+│   ├── Word Embedding/   # Word2Vec and SBERT
+│   └── Resume_testing/   # Resume matching experiments
+├── scraps/               # Raw scraped data (CSV files)
+└── linkedin.py           # LinkedIn scraper script
+```
+
+## 🛠️ Installation
+
+### Prerequisites
+
+- Python 3.8+
+- Chrome browser (for scraping)
+- LinkedIn account
+
+### Setup Steps
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/yourusername/nlp-fall-2025.git
+cd nlp-fall-2025
+```
+
+2. **Install dependencies**
+
+For the Streamlit app:
+```bash
+cd app-streamlit
+pip install -r requirements-nlp.txt
+```
+
+For NLP models, you'll also need:
+```bash
+python -m spacy download en_core_web_sm
+python -m spacy download en_core_web_lg
+```
+
+3. **Download NLTK data** (if needed)
+```python
+import nltk
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
+```
+
+## 🚀 Usage
+
+### Running the Web Application
+
+```bash
+cd app-streamlit
+streamlit run Home.py
+```
+
+The app will open in your browser at `http://localhost:8501`
+
+### Scraping LinkedIn Jobs
+
+**⚠️ Important: LinkedIn Cookie Required**
+
+You need to obtain your `li_at` cookie from LinkedIn:
+
+1. Log into LinkedIn in Chrome
+2. Open Developer Tools (F12)
+3. Go to Application → Cookies → `https://www.linkedin.com`
+4. Find and copy the `li_at` cookie value
+
+Then run:
+```bash
+LI_AT_COOKIE="your_cookie_here" python linkedin.py
+```
+
+### Running NLP Analysis
+
+Each NLP technique has dedicated Jupyter notebooks:
+
+**Named Entity Recognition:**
+```bash
+jupyter notebook workspace/NER/NER.ipynb
+```
+
+**Topic Modeling:**
+```bash
+jupyter notebook workspace/Topic\ Modeling/TopicModeling_LDA.ipynb
+jupyter notebook workspace/Topic\ Modeling/TopicModeling_LSA.ipynb
+```
+
+**Word Embeddings:**
+```bash
+jupyter notebook workspace/Word\ Embedding/Word\ Embedding_Word2Vector_UseDedup.ipynb
+jupyter notebook workspace/Word\ Embedding/Word_Embedding_SBERT_UseDedup.ipynb
+```
+
+## 📊 Features Overview
+
+### LinkedIn Job Scraper
+
+Scrapes job listings with filters for:
+- Full-time and internship positions
+- Remote work options
+- Mid to senior experience level
+- $100K+ base salary
+- Posted within the last month
+
+Output CSV includes:
+- Job Title
+- Company
+- Company Link
+- Date
+- Date Text
+- Job Link
+- Insights
+- Description Length
+- Description
+
+### NLP Analytics
+
+**1. Named Entity Recognition (NER)**
+- Extract skills and technologies
+- Identify qualifications and certifications
+- Recognize company names and locations
+- Custom entity types for job-specific information
+
+**2. Topic Modeling**
+- LDA (Latent Dirichlet Allocation)
+- LSA (Latent Semantic Analysis)
+- Discover hidden themes in job descriptions
+- Visualize topic distributions
+
+**3. Word Embeddings**
+- Word2Vec for word-level semantics
+- Sentence-BERT for document similarity
+- Find similar jobs
+- Skill relationship analysis
+
+**4. Resume Matching**
+- Extract skills from resumes
+- Compute similarity scores
+- Rank jobs by compatibility
+- Provide match explanations
+
+## 🔧 Configuration
+
+### Job Titles to Scrape
+
+Edit `linkedin.py` to customize the job titles (lines 18-28):
+
+```python
+job_titles = [
+    'Data Scientist', 
+    'Machine Learning Engineer',
+    'Software Engineer',
+    # Add your desired titles...
+]
+```
+
+### Scraping Parameters
+
+In `linkedin.py`, adjust filters:
+- Experience level
+- Work location (remote/hybrid/onsite)
+- Salary range
+- Time posted
+- Job type (full-time/internship)
+
+## 📈 Data Pipeline
+
+1. **Collection**: LinkedIn scraper → CSV files in `scraps/`
+2. **Preprocessing**: Combine and clean data → `workspace/Data/`
+3. **Analysis**: NLP models process descriptions → Extract insights
+4. **Visualization**: Streamlit app displays results
+
+## 🤝 Team
+
+Capstone Fall 2025 Team Members
+- [Team information from proposal]
+
+## 📝 Notes
+
+- The scraper uses random delays (60-240 seconds) between job title searches to avoid rate limiting
+- All scraped data is timestamped: `linkedin_jobs_YYYYMMDD_HHMMSS.csv`
+- Keep your LinkedIn cookie secure and don't commit it to version control
+- Runs in headless mode by default for efficiency
+
+## 🔒 Privacy & Ethics
+
+- Only scrapes publicly available job postings
+- Respects LinkedIn's rate limits with delays
+- No personal data collection
+- For educational/research purposes only
+
+## 📚 Resources
+
+- [spaCy Documentation](https://spacy.io/)
+- [Gensim Topic Modeling](https://radimrehurek.com/gensim/)
+- [Sentence-BERT](https://www.sbert.net/)
+- [Streamlit Documentation](https://docs.streamlit.io/)
+
+## 🐛 Troubleshooting
+
+**Issue**: Scraper fails to load jobs
+- **Solution**: Update your `li_at` cookie (cookies expire periodically)
+
+**Issue**: NER model not found
+- **Solution**: Download spaCy models: `python -m spacy download en_core_web_sm`
+
+**Issue**: Memory errors with large datasets
+- **Solution**: Process data in chunks or use sampling in the notebooks
+
+## 📄 License
+
+[Add your license here]
+
 ## LinkedIn Job Scraper
 
 This project contains a LinkedIn job scraper that collects job postings based on various job titles and saves them to CSV files.
@@ -30,7 +283,7 @@ pip install linkedin-jobs-scraper
 5. Find the cookie named `li_at`
 6. Copy the **Value** of the `li_at` cookie (it will be a long string)
 
-![LinkedIn Cookie Location](linkedin_cookie.png)
+![LinkedIn Cookie Location](/scraps/linkedin_cookie.png)
 
 **Note:** Keep this cookie value private and secure. Do not share it or commit it to version control.
 

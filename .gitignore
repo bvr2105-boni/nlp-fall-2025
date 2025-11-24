@@ -1,1 +1,15 @@
 combined_data.json
+/workspace/.local
+/workspace/.cache
+/workspace/.jupyter
+/jupyter/.local
+/jupyter/.cache
+/jupyter/.jupyter
+/app-streamlit/pages/__pycache__
+/app-streamlit/functions/__pycache__
+/app-streamlit/__pycache__
+/app-streamlit/components/__pycache__
+/workspace/.ipython
+/jupyter/.ipynb_checkpoints
+/jupyter/.ipython
+/workspace/Data/.ipynb_checkpoints

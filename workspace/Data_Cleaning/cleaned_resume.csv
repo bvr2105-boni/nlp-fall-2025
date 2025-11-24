@@ -1,0 +1,62 @@
+cleaned_text
+"SKILLS
+ - Programming & Analytics: Python, R - Version Control: Git,
+ - Databases & Data Management: PostgreSQL, MongoDB - Environment Control: Docker
+ (NoSQL), Navicat, SAP ERP - Microsoft: Excel, PowerPoint, Word, Outlook
+
+ PROFESSIONAL EXPERIENCE
+CEF SOLUTIONS, INC. CONSULTING Seoul, South Korea
+Business Enablement Associate Sep 2023 - Mar 2024
+ - Conducted market research and workflow analysis for a leading Asian financial institution’s auto-loan initiative,
+ synthesizing insights that informed strategic recommendations adopted by senior management.
+ - Designed and delivered proposal decks and presentations for stakeholders, enhancing project clarity and accelerating
+ stakeholder decision-making.
+ - Optimized and standardized process workflows for new initiatives resulting in notable increases in operational efficiency.
+ - Managed project timelines and deliverables, leading structured meetings and documentation to ensure alignment and
+ continuous progress.
+
+SAMSUNG ELECTRONICS AMERICA Ridgefield Park, USA
+Data Analyst Jul 2022 - Jul 2023
+ - Performed data validation and exploratory analysis for extensive vendor financial datasets across multiple accounts,
+ reducing transaction errors and ensuring data integrity.
+ - Conducted P&L analysis leveraging financial datasets to optimize pricing, increasing profit margins by 20% and enhancing
+ long-term operational sustainability.
+ - Analyzed large volumes of customer chargeback cases, investigating disputes and identifying root causes to recover costs
+ and strengthen vendor compliance.
+ - Leveraged SAP ERP extractions and Power Query to create recurring reports on financial and business trends, improving
+ efficiency and ensuring consistent accuracy.
+ - Monitored dashboard data accuracy, identified issues, and delivered insights that guided developers in finalizing reliable
+ executive dashboards.
+
+ EDUCATION
+Columbia University New York, NY Jan 2025 - May 2026
+Master of Science, Applied Analytics GPA: 4.0/4.0
+
+Handong Global University Pohang, South Korea Mar 2019 - Jun 2024
+Bachelor of Arts: Business Management, Economics Honors: Summa Cum Laude, GPA: 3.88/4.0
+
+ RELEVANT PROJECT EXPERIENCE
+
+Enhancing NYC 311: Key Drivers of Dissatisfaction and Trend Analysis Aug 2025
+ - Performed exploratory data analysis (EDA) on 3M+ NYC 311 requests and survey data, identifying key dissatisfaction
+ drivers across complaint types and boroughs.
+ - Applied logistic regression and topic modeling (LDA) on unstructured resolution descriptions, revealing that vague or
+ boilerplate language reduced satisfaction likelihood.
+ - Developed time-series forecasting models (ETS, ARIMA) to detect seasonal surges enabling proactive resource allocation.
+ - Delivered actionable recommendations for NYC agencies, emphasizing clearer communication templates and borough-
+ specific service strategies.
+
+ABC Foodmart Database Implementation May 2025
+ - Designed and implemented a normalized PostgreSQL database schema with 18 tables to support staffing, inventory,
+ vendor, delivery, sales, promotions, and returns.
+ - Built Python ETL pipelines (pandas, psycopg2) to ingest synthetic datasets, enforce PK/FK integrity, and automate restock
+ triggers; developed advanced SQL queries for revenue, promotions, inventory, and delivery KPIs.
+ - Created an interactive Metabase dashboard for executives and analysts, providing real-time KPIs (basket size, vendor
+ reliability, promo ROI) that enabled data-driven decisions for expansion into new store locations.
+
+Ad CTR Prediction Using KNN Imputation and XGBoost Apr 2025
+ - Cleaned and transformed data by diagnosing MAR/MCAR/MNAR patterns and applying KNN imputation; encoded
+ categorical variables using vtreat.
+ - Performed Exploratory Data Analysis (EDA) and feature selection using hybrid stepwise regression and correlation
+ analysis, identifying ad position, targeting score, and visual appeal as key drivers of CTR.
+ - Built and tuned XGBoost model, achieving the lowest RMSE outperforming all baseline models."

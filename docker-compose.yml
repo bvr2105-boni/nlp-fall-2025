@@ -1,0 +1,71 @@
+services:
+  nlp-postgres:
+    container_name: nlp-postgres
+    image: ankane/pgvector:latest
+    ports:
+      - 45432:5432
+    volumes:
+      - nlp-postgres:/var/lib/postgresql/data
+      - ./backup:/backup
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: PassW0rd
+      POSTGRES_DB: db
+      PGDATA: /var/lib/postgresql/data
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks:
+      - nlp-net
+
+  nlp-jupyter:
+    container_name: nlp-jupyter
+    build: 
+      context: .
+      dockerfile: ./jupyter/Dockerfile
+      args:
+        REQUIREMENTS_PATH: ./jupyter/requirements.txt
+    volumes:
+      - ./workspace:/home/jovyan
+      - ~/Documents:/home/jovyan/Documents
+      - ~/Downloads:/home/jovyan/Downloads
+    ports:
+      - 48888:8888
+      - 45001:5001
+    networks:
+      - nlp-net
+    command: "start-notebook.sh --NotebookApp.token="
+
+  nlp-streamlit-app:
+    image: streamlit-python3.11:latest
+    container_name: nlp-streamlit-app
+    build:
+      context: .
+      dockerfile: ./app-streamlit/Dockerfile
+      args:
+        REQUIREMENTS_PATH: ./app-streamlit/requirements.txt
+        REQUIREMENTS_DEV_PATH: ./app-streamlit/requirements-dev.txt
+    command: streamlit run Home.py --server.port 18501
+    networks:
+      - nlp-net
+    volumes:
+      - ./app-streamlit:/usr/src/app
+      - ./workspace:/workspace
+    ports:
+      - 48501:18501
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=PassW0rd
+      - POSTGRES_DB=db
+      - POSTGRES_HOST=nlp-postgres
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgresql://admin:PassW0rd@nlp-postgres:5432/db
+    depends_on:
+      - nlp-postgres
+
+volumes:
+  nlp-postgres:
+    driver: local
+
+networks:
+  nlp-net:
+    driver: bridge
