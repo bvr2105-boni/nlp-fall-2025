@@ -42,7 +42,7 @@ try:
     from functions.nlp_models import (
         load_sbert_model, generate_local_embedding, find_similar_jobs_local,
         compute_job_embeddings_sbert, build_skill_ner, extract_skill_entities, skill_jaccard_score,
-        MASTER_SKILL_LIST, SENTENCE_TRANSFORMERS_AVAILABLE,
+        SENTENCE_TRANSFORMERS_AVAILABLE,
         find_similar_jobs_trained, load_trained_word2vec_model, 
         simple_tokenize, get_doc_embedding_w2v
     )
@@ -50,6 +50,14 @@ try:
     LOCAL_MODELS_AVAILABLE = True
 except ImportError:
     LOCAL_MODELS_AVAILABLE = False
+
+# Import skill lists from nlp_config
+try:
+    from functions.nlp_config import MASTER_SKILL_LIST, EXTRA_SKILLS
+except ImportError:
+    # Fallback if nlp_config is not available
+    MASTER_SKILL_LIST = []
+    EXTRA_SKILLS = []
 
 try:
     from functions.database import find_similar_jobs, find_similar_jobs_vector, create_db_engine
@@ -71,309 +79,6 @@ try:
     SPACY_AVAILABLE = True
 except ImportError:
     SPACY_AVAILABLE = False
-
-# Master skill list from NER notebook (530+ skills)
-MASTER_SKILL_LIST = [
-    # Technical / Programming
-    "python", "r", "java", "javascript", "typescript",
-    "c++", "c#", "scala", "go", "matlab",
-    "bash", "shell scripting",
-    "software engineering", "software development",
-    "full stack development", "frontend development", "backend development",
-    "api design", "rest apis", "microservices",
-    "distributed systems", "scalable systems",
-    "cloud infrastructure", "cloud computing", "cloud native", "cloud platforms",
-
-    # Data Analytics
-    "sql", "nosql", "postgresql", "mysql", "oracle", "sqlite",
-    "mongodb", "snowflake", "redshift", "bigquery", "azure sql",
-    "data analysis", "data analytics", "statistical analysis",
-    "business intelligence", "operational reporting",
-    "process mapping", "requirements analysis",
-    "risk management", "financial reporting",
-
-    # Data Tools
-    "pandas", "numpy", "scipy", "matplotlib", "seaborn",
-    "plotly", "pyspark", "spark", "hadoop", "hive", "mapreduce", "jira",
-
-    # Machine Learning
-    "machine learning", "deep learning", "neural networks",
-    "logistic regression", "linear regression", "random forest",
-    "xgboost", "lightgbm", "catboost",
-    "svm", "knn", "decision trees", "pca", "kmeans",
-    "gradient boosting", "model tuning", "feature engineering",
-
-    # NLP
-    "nlp", "natural language processing", "topic modeling",
-    "lda", "lsa", "keyword extraction",
-    "named entity recognition", "text classification",
-    "sentiment analysis", "embeddings", "bert", "word2vec",
-
-    # Cloud
-    "aws", "azure", "gcp", "docker", "kubernetes",
-    "lambda", "ec2", "s3", "athena", "dynamodb",
-    "databricks", "airflow", "cloud functions",
-
-    # BI Tools
-    "tableau", "power bi", "metabase", "looker", "qlik",
-    "data visualization", "dashboard development",
-
-    # ETL / Pipelines
-    "etl", "elt", "data pipeline", "data ingestion",
-    "data cleaning", "data transformation", "data integration",
-
-    # Version Control & DevOps
-    "git", "github", "gitlab", "bitbucket",
-    "ci/cd", "jenkins",
-
-    # Enterprise Tools
-    "sap", "sap erp", "salesforce", "salesforce crm",
-    "hubspot", "hubspot crm", "airtable", "jira", "confluence", "notion",
-
-    # Business & Analytics Skills
-    "business analysis", "requirements gathering",
-    "market research", "competitive analysis",
-    "financial analysis", "risk analysis", "cost analysis",
-    "forecasting", "trend analysis", "variance analysis",
-    "p&l management", "strategic planning",
-    "business modeling", "stakeholder management",
-    "reporting", "presentation development",
-    "process improvement", "process optimization",
-    "root cause analysis", "gap analysis",
-    "workflow automation", "operational efficiency",
-    "kpi analysis", "performance analysis",
-    "customer segmentation", "persona development",
-    "data-driven decision making",
-
-    # Consulting skills
-    "problem solving", "insights synthesis",
-    "client communication", "proposal writing",
-    "project scoping", "roadmap planning",
-    "change management", "cross-functional collaboration",
-
-    # Marketing / Sales
-    "crm management", "lead generation", "pipeline management",
-    "sales operations", "sales strategy", "sales forecasting",
-    "revenue operations", "revops", "gtm strategy",
-    "go-to-market", "account management",
-    "client success", "customer retention", "digital marketing",
-    "content marketing", "seo", "sem", "ppc", "email marketing",
-    "campaign optimization", "social media analytics",
-
-    # Marketing tools
-    "marketing automation", "google analytics",
-    "google ads", "mailchimp", "marketo",
-    "outreach", "gong", "zoominfo",
-
-    # RevOps Processes
-    "validation rules", "crm integrations",
-    "funnel analysis", "data stamping",
-
-    # Product Skills
-    "product management", "product analytics",
-    "a/b testing", "experiment design",
-    "feature prioritization", "user research", "ux research",
-    "user stories", "agile", "scrum", "kanban",
-    "roadmap development", "user journey mapping",
-    "requirements documentation",
-    "market sizing", "competitive positioning",
-
-    # Finance & Operations Skills
-    "fp&a", "financial modeling", "budgeting",
-    "scenario analysis", "invoice processing",
-    "billing operations", "revenue analysis",
-    "cost optimization",
-
-    # Operations & Supply Chain
-    "supply chain management", "inventory management",
-    "logistics", "procurement", "vendor management",
-    "operations management", "kpi reporting",
-
-    # Soft Skills
-    "communication", "leadership", "teamwork",
-    "collaboration", "critical thinking", "problem solving",
-    "adaptability", "time management",
-    "presentation skills", "negotiation",
-    "public speaking", "project management",
-    "detail oriented", "strategic thinking",
-    "multitasking", "analytical thinking",
-    "decision making", "organization skills",
-    "attention to detail", "stakeholder communication",
-    "conflict resolution", "problem-solving skills",
-    "relationship building", "coaching", "mentoring",
-]
-
-# Extra skills / Tools (multi-industry) from NER notebook
-EXTRA_SKILLS = [
-    # Programming / tech
-    "django", "flask", "fastapi",
-    "react", "react native", "angular", "vue.js", "next.js",
-    "node.js", "express.js",
-    "php", "ruby", "ruby on rails",
-    "swift", "kotlin", "objective-c",
-    "c", "perl", "rust", "haskell",
-
-    # Mobile / app
-    "android development", "ios development",
-    "xcode", "android studio",
-
-    # Testing / QA
-    "unit testing", "integration testing",
-    "qa testing", "automation testing",
-    "selenium", "cypress", "pytest", "junit",
-
-    # Security / networking
-    "network security", "firewall configuration",
-    "penetration testing", "vulnerability assessment",
-    "siem", "splunk", "wireshark",
-    "ssl", "tls", "vpn",
-
-    # Data analytics
-    "excel", "microsoft excel",
-    "vlookup", "pivot tables",
-    "google sheets",
-    "sql server", "db2",
-    "sas", "stata", "spss",
-    "power query", "power pivot",
-    "mode analytics", "lookml",
-    "amplitude", "mixpanel",
-    "hex", "metabase",
-
-    # Cloud / DevOps / Infra
-    "terraform", "ansible", "chef", "puppet",
-    "github actions", "circleci", "travis ci",
-    "aws lambda", "aws rds", "aws ecs", "aws ecr",
-    "aws glue", "aws athena", "aws redshift",
-    "azure data factory", "azure databricks",
-    "gcp pubsub", "gcp dataflow", "gcp dataproc",
-
-    # Product / Design / UX
-    "figma", "sketch", "adobe xd",
-    "invision", "balsamiq",
-    "user journey mapping", "service blueprinting",
-    "design thinking", "wireframing", "prototyping",
-    "usability testing", "user interviews", "heuristic evaluation",
-
-    # Marketing / Growth
-    "meta ads manager", "facebook ads", "instagram ads",
-    "tiktok ads", "linkedin ads",
-    "google tag manager", "google search console",
-    "seo keyword research", "on-page seo", "technical seo",
-    "crm campaigns", "lifecycle marketing",
-    "marketing funnel analysis", "conversion rate optimization",
-    "ab testing", "landing page optimization",
-
-    # Email / automation
-    "klaviyo", "hubspot marketing", "salesforce marketing cloud",
-    "customer.io", "braze", "iterable",
-
-    # E-commerce
-    "shopify", "woocommerce", "bigcommerce", "magento",
-    "product catalog management", "pricing optimization",
-    "merchandising", "inventory planning",
-
-    # Sales / customer success / RevOps
-    "salesforce administration", "salesforce reporting",
-    "salesforce dashboards", "salesforce flows",
-    "cpq", "quote to cash",
-    "salesforce service cloud", "salesforce sales cloud",
-    "hubspot sales", "pipedrive", "zoho crm",
-    "microsoft dynamics 365",
-    "outreach", "salesloft", "apollo",
-    "gong", "chorus", "zoominfo",
-    "cold calling", "cold emailing",
-    "account planning", "territory planning",
-    "renewal management", "upsell strategy",
-    "churn analysis",
-
-    # Finance / Accounting
-    "accounts payable", "accounts receivable",
-    "general ledger", "reconciliation",
-    "month-end close", "year-end close",
-    "cash flow forecasting", "variance analysis",
-    "quickbooks", "xero", "netsuite",
-    "sap fico", "oracle ebs", "oracle fusion",
-    "financial statement analysis",
-    "credit risk modeling", "valuation modeling",
-    "discounted cash flow", "dcf modeling",
-    "equity research", "portfolio analysis",
-
-    # HR / People
-    "recruiting", "candidate screening",
-    "interview scheduling", "offer negotiation",
-    "onboarding", "offboarding",
-    "performance review process",
-    "succession planning",
-    "compensation analysis", "benefits administration",
-    "workday", "workday hcm",
-    "sap successfactors", "oracle hcm",
-    "bamboohr", "greenhouse", "lever", "jobvite",
-
-    # Operation / Logistic
-    "demand planning", "capacity planning",
-    "production scheduling", "quality control",
-    "lean manufacturing", "six sigma", "kaizen",
-    "5s methodology", "root cause analysis",
-    "warehouse management", "route optimization",
-    "fleet management", "last mile delivery",
-    "order fulfillment", "inventory forecasting",
-    "sap mm", "sap sd", "sap pp",
-    "oracle scm", "manhattan wms",
-
-    # Healthcare
-    "electronic medical records", "emr systems",
-    "ehr systems", "epic systems", "cerner",
-    "icd-10 coding", "cpt coding",
-    "clinical trials", "gcp compliance", "good clinical practice",
-    "fda regulations", "hipaa compliance",
-    "lab information systems", "pharmacovigilance",
-
-    # Education
-    "curriculum development", "lesson planning",
-    "classroom management", "learning management systems",
-    "moodle", "canvas lms", "blackboard lms",
-    "online course design", "instructional design",
-
-    # Legal
-    "contract review", "contract drafting",
-    "regulatory compliance", "policy development",
-    "risk assessment", "internal controls",
-    "gdpr compliance", "sox compliance",
-    "kyd", "kyc", "aml monitoring", "anti-money laundering",
-
-    # Creative / Media
-    "adobe photoshop", "adobe illustrator",
-    "adobe indesign", "adobe premiere pro", "after effects",
-    "video editing", "photo editing",
-    "storyboarding", "script writing",
-    "content strategy", "content calendar",
-    "social media content creation",
-
-    # Hospitality / Retail
-    "pos systems", "reservation systems",
-    "inventory counting", "food safety",
-    "barista skills", "cash handling",
-    "customer check-in", "front desk operations",
-    "event planning", "banquet operations",
-
-    # Construction / Engineer
-    "autocad", "revit", "solidworks",
-    "project bidding", "site inspection",
-    "blueprint reading", "quantity surveying",
-    "building codes", "osha compliance",
-    "pmp", "primavera p6", "ms project",
-
-    # Data privacy
-    "itil framework", "incident management",
-    "change management process", "service desk operations",
-    "access control", "identity management",
-
-    # Language
-    "translation", "interpretation",
-    "bilingual communication", "multilingual support"
-]
-
-MASTER_SKILL_LIST = list(set(MASTER_SKILL_LIST + EXTRA_SKILLS))
 
 # NER functions
 @st.cache_resource
@@ -628,7 +333,9 @@ def process_resume_and_match(resume_text: str, top_k: int = 10) -> Optional[List
                         skill_score = skill_jaccard_score(resume_skills, job_skills)
                         semantic_score = job['similarity']
                         topic_score = semantic_score  # Placeholder
-                        final_score = 0.45 * skill_score + 0.35 * semantic_score + 0.20 * topic_score
+                        # New formula: avg(topic, semantic) + (1 - avg) * NER_Score
+                        avg_topic_semantic = (topic_score + semantic_score) / 2
+                        final_score = avg_topic_semantic + (1 - avg_topic_semantic) * skill_score
                         
                         enhanced_job = job.copy()
                         enhanced_job.update({
@@ -658,9 +365,10 @@ def process_resume_and_match(resume_text: str, top_k: int = 10) -> Optional[List
 # Main content
 st.markdown("""
 Upload your resume and find the most relevant job opportunities based on **combined scoring** that balances:
-- **Skills Match (45%)**: Technical and soft skills alignment using NER
-- **Semantic Similarity (35%)**: Contextual meaning using SBERT embeddings  
-- **Topic Relevance (20%)**: Thematic alignment using topic modeling
+- **Skills Match (NER)**: Technical and soft skills alignment using NER
+- **Semantic Similarity**: Contextual meaning using SBERT embeddings  
+- **Topic Relevance**: Thematic alignment using topic modeling
+- **Final Score**: Average(topic, semantic) + (1 - average) × Skill Score
 
 The system uses Sentence-BERT (SBERT) embeddings for efficient similarity search, combined with spaCy NER for skills extraction.
 """)
@@ -930,10 +638,10 @@ st.markdown("""
 1. **Upload Resume**: Upload your resume as PDF or TXT, or paste the text directly
 2. **AI Processing**: Generate SBERT embeddings and extract skills using spaCy NER
 3. **Multi-dimensional Matching**: Compute three similarity scores:
-   - **Skill Score (45%)**: Jaccard similarity between resume and job skills
-   - **Semantic Score (35%)**: Cosine similarity of SBERT embeddings
-   - **Topic Score (20%)**: Currently uses semantic score as proxy
-4. **Combined Scoring**: Final Score = 0.45×SkillScore + 0.35×SemanticScore + 0.20×TopicScore
+   - **Skill Score (NER)**: Jaccard similarity between resume and job skills
+   - **Semantic Score**: Cosine similarity of SBERT embeddings
+   - **Topic Score**: Currently uses semantic score as proxy
+4. **Combined Scoring**: Final Score = Average(topic, semantic) + (1 - average) × Skill Score
 5. **Results**: View ranked job matches with detailed component scores and skills analysis
 
 ### 📋 Requirements

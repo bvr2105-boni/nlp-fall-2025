@@ -117,10 +117,10 @@ st.markdown("""
 This page evaluates all PDF resumes from the `Resume_testing` folder. For each resume, it finds its **top matching job** from the database using the same logic as the Resume Matching page.
 
 Each resume is scored using the same multi-dimensional matching algorithm:
-- **Skill Score (45%)**: Jaccard similarity between resume and job skills
-- **Semantic Score (35%)**: Cosine similarity of SBERT embeddings
-- **Topic Score (20%)**: Currently uses semantic score as proxy
-- **Final Score**: Weighted combination of all scores
+- **Skill Score (NER)**: Jaccard similarity between resume and job skills
+- **Semantic Score**: Cosine similarity of SBERT embeddings
+- **Topic Score**: Currently uses semantic score as proxy
+- **Final Score**: Average(topic, semantic) + (1 - average) × Skill Score
 - **LLM Evaluation**: AI-powered Yes/No assessment with:
   - **Recommendations**: If answer is "No", provides specific suggestions to improve the resume
   - **LinkedIn Keywords**: If answer is "No", suggests relevant keywords for LinkedIn job search
@@ -265,7 +265,9 @@ def find_top_job_for_resume(resume_text: str, skill_matcher, top_k: int = 1) -> 
             skill_score = skill_jaccard_score(resume_skills, job_skills)
             semantic_score = job['similarity']
             topic_score = semantic_score  # Placeholder (same as Resume Matching)
-            final_score = 0.45 * skill_score + 0.35 * semantic_score + 0.20 * topic_score
+            # New formula: avg(topic, semantic) + (1 - avg) * NER_Score
+            avg_topic_semantic = (topic_score + semantic_score) / 2
+            final_score = avg_topic_semantic + (1 - avg_topic_semantic) * skill_score
             
             enhanced_job = job.copy()
             enhanced_job.update({
@@ -338,8 +340,9 @@ def evaluate_resume_against_job(resume_text: str, job: Dict, job_embedding: Opti
     # Topic score (using semantic as proxy for now, same as Resume_Matching.py)
     topic_score = semantic_score
     
-    # Final score (same weights as Resume_Matching.py)
-    final_score = 0.45 * skill_score + 0.35 * semantic_score + 0.20 * topic_score
+    # New formula: avg(topic, semantic) + (1 - avg) * NER_Score
+    avg_topic_semantic = (topic_score + semantic_score) / 2
+    final_score = avg_topic_semantic + (1 - avg_topic_semantic) * skill_score
     
     return {
         'skill_score': skill_score,
@@ -412,11 +415,14 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 # Function to evaluate resume match using LLM
-def evaluate_with_llm(resume_text: str, job: Dict, model_name: str) -> Dict[str, any]:  # type: ignore
+def evaluate_with_llm(resume_text: str, job: Dict, model_name: str, 
+                      skill_score: float = None, semantic_score: float = None, 
+                      topic_score: float = None, final_score: float = None,
+                      resume_skills: List[str] = None, job_skills: List[str] = None) -> Dict[str, any]:  # type: ignore
     """Use LLM to evaluate if resume is a good match for the job (Yes/No)
     
-    Gets the job description from the database 'text' column, tokenizes both job and resume,
-    and sends them to the LLM for comparison. Also gets recommendations if answer is No.
+    Gets the job description from the database 'text' column, and provides computed scores
+    and extracted skills to help the LLM make an informed decision aligned with the scoring system.
     """
     if not OLLAMA_AVAILABLE:
         return {
@@ -440,60 +446,107 @@ def evaluate_with_llm(resume_text: str, job: Dict, model_name: str) -> Dict[str,
     # Get job description from database 'text' column
     job_description = job.get('text', '')
     
-    # Clean text before tokenization
+    # Clean text for better readability (but keep full text, not just tokens)
     cleaned_job_text = clean_text(job_description)
     cleaned_resume_text = clean_text(resume_text)
     
-    # Tokenize both job description and resume
-    job_tokens = simple_tokenize(cleaned_job_text.lower())
-    resume_tokens = simple_tokenize(cleaned_resume_text.lower())
+    # Prepare scores information
+    scores_info = ""
+    if final_score is not None:
+        skill_str = f"{skill_score:.3f} ({skill_score*100:.1f}%)" if skill_score is not None else "N/A"
+        semantic_str = f"{semantic_score:.3f} ({semantic_score*100:.1f}%)" if semantic_score is not None else "N/A"
+        topic_str = f"{topic_score:.3f} ({topic_score*100:.1f}%)" if topic_score is not None else "N/A"
+        
+        scores_info = f"""
+COMPUTED MATCHING SCORES:
+- Final Score: {final_score:.3f} ({final_score*100:.1f}%)
+- Skill Score (NER): {skill_str}
+- Semantic Score: {semantic_str}
+- Topic Score: {topic_str}
+
+SCORING GUIDELINES:
+- Final Score ≥ 0.75 (75%): Strong match - typically answer "Yes"
+- Final Score 0.60-0.75 (60-75%): Moderate match - consider context, usually "Yes" if skills align well
+- Final Score < 0.60 (60%): Weak match - typically answer "No"
+- The Final Score is calculated as: Average(topic, semantic) + (1 - average) × Skill Score
+- Higher scores indicate better alignment between resume and job requirements
+"""
     
-    # Convert tokens to string representation for LLM
-    job_tokens_str = ' '.join(job_tokens)
-    resume_tokens_str = ' '.join(resume_tokens)
+    # Prepare skills information
+    skills_info = ""
+    if resume_skills and job_skills:
+        matching_skills = set(resume_skills) & set(job_skills)
+        skills_info = f"""
+EXTRACTED SKILLS ANALYSIS:
+- Resume Skills Found: {len(resume_skills)} skills
+- Job Required Skills: {len(job_skills)} skills  
+- Matching Skills: {len(matching_skills)} skills
+
+Resume Skills: {', '.join(resume_skills[:20])}{'...' if len(resume_skills) > 20 else ''}
+Job Required Skills: {', '.join(job_skills[:20])}{'...' if len(job_skills) > 20 else ''}
+Matching Skills: {', '.join(sorted(matching_skills)[:20])}{'...' if len(matching_skills) > 20 else ''}
+"""
     
     system_prompt = (
-        "You are an expert recruiter and hiring manager. "
+        "You are an expert recruiter and hiring manager with access to AI-powered matching scores. "
         "Your task is to evaluate whether a candidate's resume is a good match for a job posting. "
-        "You will receive tokenized versions of both the job description and resume for comparison. "
-        "Carefully analyze the tokens to identify matching skills, experience, education, and requirements. "
-        "If the answer is 'No', provide specific recommendations to improve the resume."
+        "You will receive the full job description, resume text, computed matching scores, and extracted skills. "
+        "Use the provided scores as a strong indicator, but also consider the overall context, experience level, "
+        "and alignment of qualifications. Your evaluation should generally align with the Final Score, but you may "
+        "adjust based on critical missing requirements or exceptional qualifications not captured in the scores. "
+        "If the answer is 'No', provide specific, actionable recommendations to improve the resume."
     )
     
+    # Truncate long texts for LLM (keep first 3000 chars of each)
+    job_text_preview = cleaned_job_text[:3000] + ("..." if len(cleaned_job_text) > 3000 else "")
+    resume_text_preview = cleaned_resume_text[:3000] + ("..." if len(cleaned_resume_text) > 3000 else "")
+    
     user_prompt = f"""
-Evaluate if this resume is a good match for this job posting by comparing their tokenized content.
+Evaluate if this resume is a good match for this job posting. Use the provided matching scores as your primary guide, but also consider the full context.
 
 JOB POSTING:
 Title: {job.get('title', 'N/A')}
 Company: {job.get('company', 'N/A')}
 Job ID: {job.get('id', 'N/A')}
-Description Tokens (from database 'text' column):
-{job_tokens_str}
 
-RESUME Tokens:
-{resume_tokens_str}
+Job Description:
+{job_text_preview}
+
+RESUME:
+{resume_text_preview}
+
+{scores_info}
+
+{skills_info}
+
+EVALUATION CRITERIA:
+1. Primary indicator: Final Score (higher = better match)
+2. Consider skill alignment (matching skills vs required skills)
+3. Consider semantic/topic similarity (how well the content aligns)
+4. Consider critical missing requirements that might not be captured in scores
+5. Consider exceptional qualifications that might boost the match beyond the score
 
 Respond with the following format:
 1. First line: "Yes" or "No" (only one word)
-2. Second line: A brief one-sentence explanation of your decision
+2. Second line: A brief one-sentence explanation of your decision, referencing the Final Score
 3. If answer is "No", add a third line starting with "RECOMMENDATIONS:" followed by 3-5 specific recommendations to improve the resume (one per line, each starting with "-")
 4. If answer is "No", add a fourth line starting with "LINKEDIN_KEYWORDS:" followed by 5-10 relevant keywords for LinkedIn job search (comma-separated)
 
-Example format for "Yes":
+Example format for "Yes" (high score):
 Yes
-The candidate has relevant experience in data science and machine learning that aligns well with the job requirements.
+The Final Score of 85.2% indicates a strong match, with good alignment in skills, experience, and qualifications.
 
-Example format for "No":
+Example format for "No" (low score):
 No
-The candidate lacks required experience in cloud platforms and machine learning frameworks mentioned in the job posting.
+The Final Score of 45.3% indicates a weak match, with significant gaps in required skills and experience.
 RECOMMENDATIONS:
-- Add experience with AWS or Azure cloud platforms
-- Include machine learning frameworks like TensorFlow or PyTorch
-- Highlight any data engineering projects or experience
-- Emphasize experience with large-scale data processing
-- Add certifications or training in cloud computing
+- Add experience with [specific missing skill/technology]
+- Highlight relevant projects or achievements
+- Include certifications or training in [area]
+- Emphasize transferable skills from related experience
+- Add keywords from the job description that are missing
 LINKEDIN_KEYWORDS:
-data scientist, machine learning engineer, cloud computing, AWS, Azure, TensorFlow, PyTorch, data engineering, big data, Python
+[relevant job search keywords, comma-separated]
 """.strip()
     
     try:
@@ -740,7 +793,17 @@ if st.button("🚀 Start Evaluation", type="primary", use_container_width=True):
         }
         if use_llm_evaluation and llm_model:
             status_text.text(f"Evaluating with LLM {idx + 1}/{len(pdf_files)}: {pdf_file}")
-            llm_result = evaluate_with_llm(resume_text, top_job, llm_model)
+            llm_result = evaluate_with_llm(
+                resume_text, 
+                top_job, 
+                llm_model,
+                skill_score=top_job.get('skill_score'),
+                semantic_score=top_job.get('semantic_score'),
+                topic_score=top_job.get('topic_score'),
+                final_score=top_job.get('final_score'),
+                resume_skills=resume_skills,
+                job_skills=job_skills
+            )
         
         result_entry = {
             'resume_file': pdf_file,
@@ -1058,10 +1121,10 @@ st.markdown("""
    - Applies skill scoring and combined scoring
    - Returns the top matching job for that resume
 3. **Evaluation**: For each resume-job pair, computes:
-   - **Skill Score (45%)**: Jaccard similarity between resume and job skills
-   - **Semantic Score (35%)**: Cosine similarity of SBERT embeddings
-   - **Topic Score (20%)**: Currently uses semantic score as proxy
-   - **Final Score**: Weighted combination = 0.45×Skill + 0.35×Semantic + 0.20×Topic
+   - **Skill Score (NER)**: Jaccard similarity between resume and job skills
+   - **Semantic Score**: Cosine similarity of SBERT embeddings
+   - **Topic Score**: Currently uses semantic score as proxy
+   - **Final Score**: Average(topic, semantic) + (1 - average) × Skill Score
 4. **LLM Evaluation**: If enabled, uses AI to assess match quality:
    - **Yes/No Assessment**: Determines if resume is a good match
    - **Recommendations**: If "No", provides specific suggestions to improve the resume
