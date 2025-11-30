@@ -34,7 +34,8 @@ st.title("📊 Resume Evaluation - Batch Analysis")
 try:
     from functions.nlp_models import (
         generate_local_embedding, build_skill_ner, extract_skill_entities, skill_jaccard_score,
-        MASTER_SKILL_LIST, simple_tokenize
+        simple_tokenize,
+        load_trained_topic_model, get_document_topics, compute_topic_similarity
     )
     LOCAL_MODELS_AVAILABLE = True
 except ImportError:
@@ -45,6 +46,16 @@ except ImportError:
         if pd.isna(text) or not isinstance(text, str):
             return []
         return str(text).split()
+
+# Import skill lists from nlp_config (same source as Resume Matching page)
+try:
+    from functions.nlp_config import MASTER_SKILL_LIST
+except ImportError:
+    # Fallback if nlp_config is not available
+    try:
+        from functions.nlp_models import MASTER_SKILL_LIST
+    except ImportError:
+        MASTER_SKILL_LIST = []
 
 try:
     from functions.database import create_db_engine, find_similar_jobs_vector
@@ -73,6 +84,13 @@ try:
     OLLAMA_AVAILABLE = True
 except ImportError:
     OLLAMA_AVAILABLE = False
+
+# Try to import transformers for token counting
+try:
+    from transformers import AutoTokenizer
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
 
 # Check if services are available
 if not LOCAL_MODELS_AVAILABLE:
@@ -114,12 +132,14 @@ def _get_ollama_model() -> str:
 
 st.markdown("""
 ### Overview
-This page evaluates all PDF resumes from the `Resume_testing` folder. For each resume, it finds its **top matching job** from the database using the same logic as the Resume Matching page.
+This page evaluates all PDF resumes from the `Resume_testing` folder. For each resume, it finds its **top 3 matching jobs** from the database using the same logic as the Resume Matching page.
 
-Each resume is scored using the same multi-dimensional matching algorithm:
-- **Skill Score (NER)**: Jaccard similarity between resume and job skills
+**Evaluation Mode**: Each resume is evaluated against its top 3 matching jobs, resulting in 3× the number of resumes in total evaluations.
+
+Each resume-job pair is scored using the same multi-dimensional matching algorithm:
+- **Skill Score (Keyword-based)**: Jaccard similarity between resume and job skills
 - **Semantic Score**: Cosine similarity of SBERT embeddings
-- **Topic Score**: Currently uses semantic score as proxy
+- **Topic Score**: Cosine similarity of LSA 100 topics model distributions (falls back to semantic if model not available)
 - **Final Score**: Average(topic, semantic) + (1 - average) × Skill Score
 - **LLM Evaluation**: AI-powered Yes/No assessment with:
   - **Recommendations**: If answer is "No", provides specific suggestions to improve the resume
@@ -218,27 +238,158 @@ def extract_text_from_pdf(file_path: str) -> Optional[str]:
         st.warning(f"Error reading PDF {file_path}: {e}")
         return None
 
-# Function to find top matching job for a resume (same logic as Resume Matching page)
-def find_top_job_for_resume(resume_text: str, skill_matcher, top_k: int = 1) -> Optional[Dict]:
-    """Find the top matching job for a resume using the same logic as Resume Matching page
+# Simple keyword-based skill extraction (without NER)
+def extract_skills_keywords(text: str, skill_list: List[str]) -> List[str]:
+    """
+    Extract skills from text using simple keyword matching (no NER).
+    Checks if skills from the skill list appear in the text (case-insensitive).
+    
+    Args:
+        text: Text to extract skills from
+        skill_list: List of skills to search for
+    
+    Returns:
+        List of matching skills (lowercase, deduplicated, sorted)
+    """
+    if not text or not skill_list:
+        return []
+    
+    text_lower = text.lower()
+    skills_found = set()
+    
+    for skill in skill_list:
+        skill_lower = skill.lower().strip()
+        if not skill_lower:
+            continue
+        
+        # Check if skill appears in text (word boundary matching for single words,
+        # substring matching for multi-word skills)
+        if ' ' in skill_lower:
+            # Multi-word skill: check if it appears as substring
+            if skill_lower in text_lower:
+                skills_found.add(skill_lower)
+        else:
+            # Single-word skill: use word boundary matching
+            pattern = r'\b' + re.escape(skill_lower) + r'\b'
+            if re.search(pattern, text_lower):
+                skills_found.add(skill_lower)
+    
+    return sorted(list(skills_found))
+
+# Helper function to calculate matching skills consistently
+def calculate_matching_skills(resume_skills: List[str], job_skills: List[str]) -> set:
+    """
+    Calculate matching skills between resume and job, ensuring consistent normalization.
+    Normalizes skills to lowercase and removes duplicates before comparison.
+    """
+    # Normalize skills: convert to lowercase and remove duplicates
+    resume_skills_normalized = {skill.lower().strip() for skill in resume_skills if skill}
+    job_skills_normalized = {skill.lower().strip() for skill in job_skills if skill}
+    # Return intersection
+    return resume_skills_normalized & job_skills_normalized
+
+# Helper function to load the specific LSA 100 topics model
+@st.cache_resource
+def get_lsa_100_topics_model():
+    """Load the saved LSA 100 topics model - cached"""
+    try:
+        import joblib
+        workspace_path = st.session_state.get('workspace_path')
+        if workspace_path:
+            models_dir = os.path.join(workspace_path, "models")
+        else:
+            models_dir = "models"
+        
+        model_filename = "topic_model_lsa_100topics.joblib"
+        model_path = os.path.join(models_dir, model_filename)
+        
+        if os.path.exists(model_path):
+            try:
+                model_data = joblib.load(model_path)
+                return {
+                    'vectorizer': model_data['vectorizer'],
+                    'model': model_data['model'],
+                    'results': model_data['results']
+                }
+            except Exception as e:
+                st.warning(f"Error loading LSA 100 topics model: {e}")
+                return None
+        else:
+            st.warning(f"LSA 100 topics model not found at {model_path}")
+            return None
+    except ImportError:
+        st.warning("joblib not available for loading topic model")
+        return None
+    except Exception:
+        return None
+
+# Helper function to compute topic similarity using LDA/LSA (kept for backward compatibility)
+@st.cache_resource
+def get_topic_model(_method='LDA', _n_topics=10):
+    """Load topic model (LDA or LSA) - cached"""
+    try:
+        return load_trained_topic_model(method=_method, n_topics=_n_topics)
+    except Exception:
+        return None
+
+def compute_topic_score(resume_text: str, job_text: str, topic_model_data=None) -> float:
+    """
+    Compute topic similarity score between resume and job using LSA 100 topics model.
+    Falls back to 0.0 if topic model is not available.
+    
+    Args:
+        resume_text: Resume text
+        job_text: Job description text
+        topic_model_data: Pre-loaded topic model data (optional)
+    
+    Returns:
+        Topic similarity score (0.0 to 1.0)
+    """
+    if topic_model_data is None:
+        # Load the specific LSA 100 topics model
+        topic_model_data = get_lsa_100_topics_model()
+    
+    if topic_model_data is None:
+        # No topic model available, return 0.0 (will use semantic as fallback)
+        return 0.0
+    
+    try:
+        # Get topic distributions for both texts
+        resume_topics = get_document_topics(resume_text, topic_model_data)
+        job_topics = get_document_topics(job_text, topic_model_data)
+        
+        if resume_topics is None or job_topics is None:
+            return 0.0
+        
+        # Compute cosine similarity between topic distributions
+        topic_score = compute_topic_similarity(resume_topics, job_topics)
+        
+        # Ensure score is between 0 and 1
+        return max(0.0, min(1.0, float(topic_score)))
+    except Exception as e:
+        # If any error occurs, return 0.0
+        return 0.0
+
+# Function to find top matching jobs for a resume (same logic as Resume Matching page)
+def find_top_jobs_for_resume(resume_text: str, top_k: int = 3) -> List[Dict]:
+    """Find the top matching jobs for a resume using the same logic as Resume Matching page
     
     Args:
         resume_text: Text content of the resume
-        skill_matcher: spaCy skill matcher
-        top_k: Number of top jobs to return (default 1 for top job)
+        top_k: Number of top jobs to return (default 3 for top 3 jobs)
     
     Returns:
-        Top matching job dictionary with scores, or None if no match found
+        List of top matching job dictionaries with scores, or empty list if no match found
     """
     if not DATABASE_AVAILABLE:
-        return None
+        return []
     
     try:
         # Generate SBERT embedding for resume (same as Resume Matching)
         resume_sbert_emb = generate_local_embedding(resume_text, method="sbert")
         
         if resume_sbert_emb is None:
-            return None
+            return []
         
         # Use database vector search (same as Resume Matching)
         matching_results = find_similar_jobs_vector(
@@ -248,24 +399,33 @@ def find_top_job_for_resume(resume_text: str, skill_matcher, top_k: int = 1) -> 
         )
         
         if not matching_results:
-            return None
+            return []
         
-        # Extract resume skills
-        resume_skills = extract_skill_entities(resume_text, skill_matcher) if skill_matcher else []
+        # Extract resume skills using simple keyword matching (no NER)
+        resume_skills = extract_skills_keywords(resume_text, MASTER_SKILL_LIST)
+        
+        # Load LSA 100 topics model
+        topic_model_data = get_lsa_100_topics_model()
         
         # Apply skills scoring to database results (same as Resume Matching)
         enhanced_matches = []
         for job in matching_results:
             job_text = job.get('text', '')
             
-            # Extract skills from job text
-            job_skills = extract_skill_entities(job_text, skill_matcher) if skill_matcher else []
+            # Extract skills from job text using simple keyword matching (no NER)
+            job_skills = extract_skills_keywords(job_text, MASTER_SKILL_LIST)
             
             # Compute scores (same weights as Resume Matching)
             skill_score = skill_jaccard_score(resume_skills, job_skills)
             semantic_score = job['similarity']
-            topic_score = semantic_score  # Placeholder (same as Resume Matching)
-            # New formula: avg(topic, semantic) + (1 - avg) * NER_Score
+            
+            # Compute topic score using LSA 100 topics model (fallback to semantic if model not available)
+            topic_score = compute_topic_score(resume_text, job_text, topic_model_data)
+            if topic_score == 0.0:
+                # Fallback to semantic score if topic model not available
+                topic_score = semantic_score
+            
+            # New formula: avg(topic, semantic) + (1 - avg) * Skill_Score
             avg_topic_semantic = (topic_score + semantic_score) / 2
             final_score = avg_topic_semantic + (1 - avg_topic_semantic) * skill_score
             
@@ -280,29 +440,26 @@ def find_top_job_for_resume(resume_text: str, skill_matcher, top_k: int = 1) -> 
             })
             enhanced_matches.append(enhanced_job)
         
-        # Sort by final score and return top job (same as Resume Matching)
+        # Sort by final score and return top k jobs
         enhanced_matches.sort(key=lambda x: x['final_score'], reverse=True)
-        top_job = enhanced_matches[0] if enhanced_matches else None
-        
-        return top_job
+        return enhanced_matches[:top_k]
         
     except Exception as e:
-        st.warning(f"Error finding top job for resume: {e}")
-        return None
+        st.warning(f"Error finding top jobs for resume: {e}")
+        return []
 
 # Function to evaluate resume against job (kept for compatibility, but now we use find_top_job_for_resume)
-def evaluate_resume_against_job(resume_text: str, job: Dict, job_embedding: Optional[np.ndarray], skill_matcher) -> Dict:
+def evaluate_resume_against_job(resume_text: str, job: Dict, job_embedding: Optional[np.ndarray]) -> Dict:
     """Evaluate a resume against a job and return scores
     
     Args:
         resume_text: Text content of the resume
         job: Job dictionary with id, title, company, text
         job_embedding: Pre-computed job embedding (None if not available)
-        skill_matcher: spaCy skill matcher
     """
-    # Extract skills
-    resume_skills = extract_skill_entities(resume_text, skill_matcher) if skill_matcher else []
-    job_skills = extract_skill_entities(job['text'], skill_matcher) if skill_matcher else []
+    # Extract skills using simple keyword matching (no NER)
+    resume_skills = extract_skills_keywords(resume_text, MASTER_SKILL_LIST)
+    job_skills = extract_skills_keywords(job['text'], MASTER_SKILL_LIST)
     
     # Calculate skill score
     skill_score = skill_jaccard_score(resume_skills, job_skills)
@@ -337,8 +494,11 @@ def evaluate_resume_against_job(resume_text: str, job: Dict, job_embedding: Opti
             st.warning(f"Error calculating semantic score: {e}")
             semantic_score = 0.0
     
-    # Topic score (using semantic as proxy for now, same as Resume_Matching.py)
-    topic_score = semantic_score
+    # Compute topic score using LSA 100 topics model (fallback to semantic if model not available)
+    topic_score = compute_topic_score(resume_text, job['text'])
+    if topic_score == 0.0:
+        # Fallback to semantic score if topic model not available
+        topic_score = semantic_score
     
     # New formula: avg(topic, semantic) + (1 - avg) * NER_Score
     avg_topic_semantic = (topic_score + semantic_score) / 2
@@ -414,6 +574,79 @@ def clean_text(text: str) -> str:
 
     return text.strip()
 
+# Token counting and truncation function
+@st.cache_resource
+def _get_tokenizer():
+    """Get tokenizer for counting tokens - cached"""
+    if not TRANSFORMERS_AVAILABLE:
+        return None
+    try:
+        # Use a common tokenizer that works well for most models
+        # GPT-2 tokenizer is fast and widely compatible
+        return AutoTokenizer.from_pretrained("gpt2")
+    except Exception:
+        return None
+
+def count_tokens(text: str) -> int:
+    """Count tokens in text using tokenizer if available, otherwise use approximation"""
+    if not text:
+        return 0
+    
+    tokenizer = _get_tokenizer()
+    if tokenizer is not None:
+        try:
+            tokens = tokenizer.encode(text, add_special_tokens=False)
+            return len(tokens)
+        except Exception:
+            pass
+    
+    # Fallback: approximate token count (roughly 4 characters per token for English)
+    return len(text) // 4
+
+def truncate_by_tokens(text: str, max_tokens: int, suffix: str = "...") -> str:
+    """Truncate text to fit within max_tokens, preserving word boundaries when possible"""
+    if not text:
+        return text
+    
+    tokenizer = _get_tokenizer()
+    
+    if tokenizer is not None:
+        try:
+            # Encode the text
+            tokens = tokenizer.encode(text, add_special_tokens=False)
+            
+            # If text fits, return as is
+            if len(tokens) <= max_tokens:
+                return text
+            
+            # Truncate tokens
+            truncated_tokens = tokens[:max_tokens]
+            
+            # Decode back to text
+            truncated_text = tokenizer.decode(truncated_tokens, skip_special_tokens=True)
+            
+            # Add suffix if text was truncated
+            if len(tokens) > max_tokens:
+                return truncated_text + suffix
+            
+            return truncated_text
+        except Exception:
+            pass
+    
+    # Fallback: character-based truncation (approximate)
+    # Roughly 4 characters per token
+    max_chars = max_tokens * 4
+    if len(text) <= max_chars:
+        return text
+    
+    truncated = text[:max_chars]
+    # Try to cut at word boundary
+    last_space = truncated.rfind(' ')
+    if last_space > max_chars * 0.8:  # If we can find a space reasonably close
+        truncated = truncated[:last_space]
+    
+    return truncated + suffix
+
 # Function to evaluate resume match using LLM
 def evaluate_with_llm(resume_text: str, job: Dict, model_name: str, 
                       skill_score: float = None, semantic_score: float = None, 
@@ -421,8 +654,12 @@ def evaluate_with_llm(resume_text: str, job: Dict, model_name: str,
                       resume_skills: List[str] = None, job_skills: List[str] = None) -> Dict[str, any]:  # type: ignore
     """Use LLM to evaluate if resume is a good match for the job (Yes/No)
     
-    Gets the job description from the database 'text' column, and provides computed scores
-    and extracted skills to help the LLM make an informed decision aligned with the scoring system.
+    Gets the job description from the database 'text' column and resume text.
+    The LLM evaluates the match based solely on the job description and resume content,
+    without any pre-computed scores or extracted skills information.
+    Returns Yes/No assessment with reasoning, recommendations, and LinkedIn keywords.
+    
+    Note: Score parameters are kept for backward compatibility but are not used in the prompt.
     """
     if not OLLAMA_AVAILABLE:
         return {
@@ -450,106 +687,86 @@ def evaluate_with_llm(resume_text: str, job: Dict, model_name: str,
     cleaned_job_text = clean_text(job_description)
     cleaned_resume_text = clean_text(resume_text)
     
-    # Prepare scores information
-    scores_info = ""
-    if final_score is not None:
-        skill_str = f"{skill_score:.3f} ({skill_score*100:.1f}%)" if skill_score is not None else "N/A"
-        semantic_str = f"{semantic_score:.3f} ({semantic_score*100:.1f}%)" if semantic_score is not None else "N/A"
-        topic_str = f"{topic_score:.3f} ({topic_score*100:.1f}%)" if topic_score is not None else "N/A"
-        
-        scores_info = f"""
-COMPUTED MATCHING SCORES:
-- Final Score: {final_score:.3f} ({final_score*100:.1f}%)
-- Skill Score (NER): {skill_str}
-- Semantic Score: {semantic_str}
-- Topic Score: {topic_str}
-
-SCORING GUIDELINES:
-- Final Score ≥ 0.75 (75%): Strong match - typically answer "Yes"
-- Final Score 0.60-0.75 (60-75%): Moderate match - consider context, usually "Yes" if skills align well
-- Final Score < 0.60 (60%): Weak match - typically answer "No"
-- The Final Score is calculated as: Average(topic, semantic) + (1 - average) × Skill Score
-- Higher scores indicate better alignment between resume and job requirements
-"""
-    
-    # Prepare skills information
-    skills_info = ""
-    if resume_skills and job_skills:
-        matching_skills = set(resume_skills) & set(job_skills)
-        skills_info = f"""
-EXTRACTED SKILLS ANALYSIS:
-- Resume Skills Found: {len(resume_skills)} skills
-- Job Required Skills: {len(job_skills)} skills  
-- Matching Skills: {len(matching_skills)} skills
-
-Resume Skills: {', '.join(resume_skills[:20])}{'...' if len(resume_skills) > 20 else ''}
-Job Required Skills: {', '.join(job_skills[:20])}{'...' if len(job_skills) > 20 else ''}
-Matching Skills: {', '.join(sorted(matching_skills)[:20])}{'...' if len(matching_skills) > 20 else ''}
-"""
-    
     system_prompt = (
-        "You are an expert recruiter and hiring manager with access to AI-powered matching scores. "
-        "Your task is to evaluate whether a candidate's resume is a good match for a job posting. "
-        "You will receive the full job description, resume text, computed matching scores, and extracted skills. "
-        "Use the provided scores as a strong indicator, but also consider the overall context, experience level, "
-        "and alignment of qualifications. Your evaluation should generally align with the Final Score, but you may "
-        "adjust based on critical missing requirements or exceptional qualifications not captured in the scores. "
-        "If the answer is 'No', provide specific, actionable recommendations to improve the resume."
+        "You are an expert recruiter evaluating resume-job matches. "
+        "Job descriptions often list ideal candidates with all possible skills - this is unrealistic. "
+        "Focus on ESSENTIAL qualifications needed to perform core job functions. "
+        "Consider transferable skills, related experience, and learning ability. "
+        "A 'Yes' means the candidate can reasonably do the job, not that they have every skill listed."
     )
     
-    # Truncate long texts for LLM (keep first 3000 chars of each)
-    job_text_preview = cleaned_job_text[:3000] + ("..." if len(cleaned_job_text) > 3000 else "")
-    resume_text_preview = cleaned_resume_text[:3000] + ("..." if len(cleaned_resume_text) > 3000 else "")
-    
-    user_prompt = f"""
-Evaluate if this resume is a good match for this job posting. Use the provided matching scores as your primary guide, but also consider the full context.
+    # Token budget allocation (max 5000 tokens total for input)
+    # Reserve tokens for: system prompt (~100), user prompt template (~300), job title (~20)
+    # Allocate remaining tokens between job description and resume (50/50 split)
+    MAX_INPUT_TOKENS = 5000
+    system_tokens = count_tokens(system_prompt)
+    prompt_template = """Evaluate if this resume matches this job posting. Be practical and realistic.
 
 JOB POSTING:
-Title: {job.get('title', 'N/A')}
-Company: {job.get('company', 'N/A')}
-Job ID: {job.get('id', 'N/A')}
-
-Job Description:
-{job_text_preview}
+Title: {title}
+Description: {job_text}
 
 RESUME:
-{resume_text_preview}
+{resume_text}
 
-{scores_info}
+EVALUATION APPROACH:
+1. Identify 3-5 CORE skills/requirements essential for this role (ignore nice-to-haves)
+2. Check if candidate has these core skills OR transferable/equivalent experience
+3. Assess if candidate's experience level aligns with role expectations
+4. Consider: Can they reasonably perform the core job functions? If yes → "Yes"
 
-{skills_info}
+DECISION RULES:
+- Answer "Yes" if: Candidate has essential qualifications OR strong transferable skills that indicate they can learn/adapt
+- Answer "No" only if: Missing critical core requirements that would prevent basic job performance
 
-EVALUATION CRITERIA:
-1. Primary indicator: Final Score (higher = better match)
-2. Consider skill alignment (matching skills vs required skills)
-3. Consider semantic/topic similarity (how well the content aligns)
-4. Consider critical missing requirements that might not be captured in scores
-5. Consider exceptional qualifications that might boost the match beyond the score
+OUTPUT FORMAT:
+Line 1: "Yes" or "No"
+Line 2: One-sentence explanation
+If "No", then:
+Line 3: "RECOMMENDATIONS:" followed by 3-5 specific, actionable recommendations (one per line, each starting with "-")
+Line 4: "LINKEDIN_KEYWORDS:" followed by 5-10 relevant job search keywords (comma-separated)
 
-Respond with the following format:
-1. First line: "Yes" or "No" (only one word)
-2. Second line: A brief one-sentence explanation of your decision, referencing the Final Score
-3. If answer is "No", add a third line starting with "RECOMMENDATIONS:" followed by 3-5 specific recommendations to improve the resume (one per line, each starting with "-")
-4. If answer is "No", add a fourth line starting with "LINKEDIN_KEYWORDS:" followed by 5-10 relevant keywords for LinkedIn job search (comma-separated)
+EXAMPLES:
 
-Example format for "Yes" (high score):
 Yes
-The Final Score of 85.2% indicates a strong match, with good alignment in skills, experience, and qualifications.
+The candidate has the essential technical skills and relevant experience level for this role, with transferable capabilities that indicate they can perform effectively.
 
-Example format for "No" (low score):
 No
-The Final Score of 45.3% indicates a weak match, with significant gaps in required skills and experience.
+The candidate lacks critical core requirements (e.g., [specific essential skill]) that are fundamental to performing this role.
 RECOMMENDATIONS:
-- Add experience with [specific missing skill/technology]
-- Highlight relevant projects or achievements
-- Include certifications or training in [area]
-- Emphasize transferable skills from related experience
-- Add keywords from the job description that are missing
+- Develop proficiency in [critical missing skill] through projects or training
+- Highlight similar technologies or related experience that demonstrates capability
+- Obtain certification in [core area] to strengthen qualifications
+- Emphasize learning ability and adaptability from past role transitions
 LINKEDIN_KEYWORDS:
-[relevant job search keywords, comma-separated]
-""".strip()
+[relevant keywords, comma-separated]"""
+    
+    template_tokens = count_tokens(prompt_template.format(title="", job_text="", resume_text=""))
+    job_title_tokens = count_tokens(job.get('title', 'N/A'))
+    
+    # Calculate available tokens for job description and resume
+    reserved_tokens = system_tokens + template_tokens + job_title_tokens + 100  # 100 buffer
+    available_tokens = MAX_INPUT_TOKENS - reserved_tokens
+    
+    # Allocate 50/50 between job and resume, but ensure minimum of 500 tokens each
+    tokens_per_text = max(500, available_tokens // 2)
+    
+    # Truncate texts based on token count
+    job_text_preview = truncate_by_tokens(cleaned_job_text, tokens_per_text)
+    resume_text_preview = truncate_by_tokens(cleaned_resume_text, tokens_per_text)
+    
+    # Format user prompt using template
+    user_prompt = prompt_template.format(
+        title=job.get('title', 'N/A'),
+        job_text=job_text_preview,
+        resume_text=resume_text_preview
+    ).strip()
     
     try:
+        # Use default context window size (no num_ctx limit)
+        # Default context window sizes in Ollama:
+        # - Most models: 4,096 tokens (default)
+        # - gpt-oss model: 8,192 tokens (default)
         response = client.chat(
             model=model_name,
             messages=[
@@ -662,9 +879,10 @@ st.markdown("### 🎯 Evaluation Mode")
 
 st.info("""
 **How it works:**
-- For each resume, the system finds its **top matching job** using the same logic as the Resume Matching page
-- Each resume is evaluated against its own top matching job (not a single job for all resumes)
-- This ensures each resume is matched with the most relevant job for that specific candidate
+- For each resume, the system finds its **top N matching jobs** using the same logic as the Resume Matching page (select N using the slider below)
+- Each resume is evaluated against all N of its top matching jobs
+- This provides multiple job opportunities per resume and allows comparison of different match quality levels
+- Total evaluations = N × number of resumes
 """)
 
 # Get resume testing directory
@@ -690,6 +908,32 @@ if not pdf_files:
 
 st.info(f"Found **{len(pdf_files)}** PDF resume files in `{resume_dir}`")
 
+# Sample size selector
+max_resumes = len(pdf_files)
+sample_size = st.slider(
+    "📊 Select number of resumes to evaluate",
+    min_value=1,
+    max_value=max_resumes,
+    value=min(5, max_resumes),  # Default to 5 or total if less than 5
+    help=f"Choose how many resumes to process (out of {max_resumes} total). This allows you to test the evaluation on a sample before processing all resumes."
+)
+
+# Show which resumes will be processed
+if sample_size < max_resumes:
+    selected_files = pdf_files[:sample_size]
+    st.info(f"📋 Will process **{sample_size}** resume(s): {', '.join(selected_files)}")
+else:
+    st.info(f"📋 Will process all **{max_resumes}** resume(s)")
+
+# Top jobs selector
+top_jobs_count = st.slider(
+    "Select number of top jobs to evaluate per resume",
+    min_value=1,
+    max_value=10,
+    value=3,  # Default to 3
+    help="For each resume, the system will find and evaluate against this many top matching jobs from the database."
+)
+
 # LLM evaluation toggle
 use_llm_evaluation = st.checkbox(
     "🤖 Enable LLM-based evaluation (Yes/No match assessment)",
@@ -699,13 +943,13 @@ use_llm_evaluation = st.checkbox(
 )
 
 # Evaluation button
-if st.button("🚀 Start Evaluation", type="primary", use_container_width=True):
+if st.button("Start Evaluation", type="primary", use_container_width=True):
     # Initialize progress
     progress_bar = st.progress(0)
     status_text = st.empty()
     
-    # Build skill matcher
-    skill_matcher = build_skill_ner(MASTER_SKILL_LIST) if SPACY_AVAILABLE else None
+    # Note: Using simple keyword-based skill extraction (no NER)
+    # skill_matcher is not needed for keyword-based extraction
     
     # Get LLM model name
     llm_model = _get_ollama_model() if use_llm_evaluation and OLLAMA_AVAILABLE else None
@@ -713,14 +957,17 @@ if st.button("🚀 Start Evaluation", type="primary", use_container_width=True):
     # Store results
     results = []
     
+    # Get selected sample of resumes
+    selected_pdf_files = pdf_files[:sample_size]
+    
     # Process each resume
-    for idx, pdf_file in enumerate(pdf_files):
+    for idx, pdf_file in enumerate(selected_pdf_files):
         pdf_path = os.path.join(resume_dir, pdf_file)
         
         # Update progress
-        progress = (idx + 1) / len(pdf_files)
+        progress = (idx + 1) / len(selected_pdf_files)
         progress_bar.progress(progress)
-        status_text.text(f"Processing {idx + 1}/{len(pdf_files)}: {pdf_file}")
+        status_text.text(f"Processing {idx + 1}/{len(selected_pdf_files)}: {pdf_file}")
         
         # Extract text from PDF
         resume_text = extract_text_from_pdf(pdf_path)
@@ -728,6 +975,7 @@ if st.button("🚀 Start Evaluation", type="primary", use_container_width=True):
         if resume_text is None or len(resume_text.strip()) == 0:
             result_entry = {
                 'resume_file': pdf_file,
+                'job_rank': 0,
                 'job_title': 'N/A',
                 'job_company': 'N/A',
                 'job_id': 'N/A',
@@ -749,13 +997,14 @@ if st.button("🚀 Start Evaluation", type="primary", use_container_width=True):
             results.append(result_entry)
             continue
         
-        # Find top matching job for this resume (same logic as Resume Matching page)
-        status_text.text(f"Finding top job for {idx + 1}/{len(pdf_files)}: {pdf_file}")
-        top_job = find_top_job_for_resume(resume_text, skill_matcher, top_k=1)
+        # Find top N matching jobs for this resume (same logic as Resume Matching page)
+        status_text.text(f"Finding top {top_jobs_count} jobs for {idx + 1}/{len(selected_pdf_files)}: {pdf_file}")
+        top_jobs = find_top_jobs_for_resume(resume_text, top_k=top_jobs_count)
         
-        if top_job is None:
+        if not top_jobs:
             result_entry = {
                 'resume_file': pdf_file,
+                'job_rank': 0,
                 'job_title': 'N/A',
                 'job_company': 'N/A',
                 'job_id': 'N/A',
@@ -772,62 +1021,65 @@ if st.button("🚀 Start Evaluation", type="primary", use_container_width=True):
                 'llm_reasoning': None,
                 'llm_recommendations': None,
                 'linkedin_keywords': None,
-                'llm_error': 'Could not find top job'
+                'llm_error': 'Could not find top jobs'
             }
             results.append(result_entry)
             continue
         
-        # Use scores from find_top_job_for_resume (already computed)
-        # Calculate matching skills count
-        resume_skills = top_job.get('resume_skills', [])
-        job_skills = top_job.get('job_skills', [])
-        matching_skills = set(resume_skills) & set(job_skills)
-        
-        # LLM evaluation
-        llm_result = {
-            'llm_match': None, 
-            'llm_reasoning': None, 
-            'llm_recommendations': None,
-            'linkedin_keywords': None,
-            'llm_error': None
-        }
-        if use_llm_evaluation and llm_model:
-            status_text.text(f"Evaluating with LLM {idx + 1}/{len(pdf_files)}: {pdf_file}")
-            llm_result = evaluate_with_llm(
-                resume_text, 
-                top_job, 
-                llm_model,
-                skill_score=top_job.get('skill_score'),
-                semantic_score=top_job.get('semantic_score'),
-                topic_score=top_job.get('topic_score'),
-                final_score=top_job.get('final_score'),
-                resume_skills=resume_skills,
-                job_skills=job_skills
-            )
-        
-        result_entry = {
-            'resume_file': pdf_file,
-            'job_title': top_job.get('title', 'N/A'),
-            'job_company': top_job.get('company', 'N/A'),
-            'job_id': top_job.get('id', 'N/A'),
-            'skill_score': top_job.get('skill_score', 0.0),
-            'semantic_score': top_job.get('semantic_score', 0.0),
-            'topic_score': top_job.get('topic_score', 0.0),
-            'final_score': top_job.get('final_score', 0.0),
-            'resume_skills_count': len(resume_skills),
-            'job_skills_count': len(job_skills),
-            'matching_skills_count': len(matching_skills),
-            'resume_text_length': len(resume_text),
-            'resume_skills': resume_skills,
-            'job_skills': job_skills,
-            'error': None,
-            'llm_match': llm_result.get('llm_match'),
-            'llm_reasoning': llm_result.get('llm_reasoning'),
-            'llm_recommendations': llm_result.get('llm_recommendations'),
-            'linkedin_keywords': llm_result.get('linkedin_keywords'),
-            'llm_error': llm_result.get('llm_error')
-        }
-        results.append(result_entry)
+        # Evaluate against each of the top N jobs
+        for job_rank, top_job in enumerate(top_jobs, start=1):
+            # Use scores from find_top_jobs_for_resume (already computed)
+            # Calculate matching skills count (using consistent normalization)
+            resume_skills = top_job.get('resume_skills', [])
+            job_skills = top_job.get('job_skills', [])
+            matching_skills = calculate_matching_skills(resume_skills, job_skills)
+            
+            # LLM evaluation
+            llm_result = {
+                'llm_match': None, 
+                'llm_reasoning': None, 
+                'llm_recommendations': None,
+                'linkedin_keywords': None,
+                'llm_error': None
+            }
+            if use_llm_evaluation and llm_model:
+                status_text.text(f"Evaluating with LLM {idx + 1}/{len(selected_pdf_files)}: {pdf_file} - Job #{job_rank}")
+                llm_result = evaluate_with_llm(
+                    resume_text, 
+                    top_job, 
+                    llm_model,
+                    skill_score=top_job.get('skill_score'),
+                    semantic_score=top_job.get('semantic_score'),
+                    topic_score=top_job.get('topic_score'),
+                    final_score=top_job.get('final_score'),
+                    resume_skills=resume_skills,
+                    job_skills=job_skills
+                )
+            
+            result_entry = {
+                'resume_file': pdf_file,
+                'job_rank': job_rank,
+                'job_title': top_job.get('title', 'N/A'),
+                'job_company': top_job.get('company', 'N/A'),
+                'job_id': top_job.get('id', 'N/A'),
+                'skill_score': top_job.get('skill_score', 0.0),
+                'semantic_score': top_job.get('semantic_score', 0.0),
+                'topic_score': top_job.get('topic_score', 0.0),
+                'final_score': top_job.get('final_score', 0.0),
+                'resume_skills_count': len(resume_skills),
+                'job_skills_count': len(job_skills),
+                'matching_skills_count': len(matching_skills),
+                'resume_text_length': len(resume_text),
+                'resume_skills': resume_skills,
+                'job_skills': job_skills,
+                'error': None,
+                'llm_match': llm_result.get('llm_match'),
+                'llm_reasoning': llm_result.get('llm_reasoning'),
+                'llm_recommendations': llm_result.get('llm_recommendations'),
+                'linkedin_keywords': llm_result.get('linkedin_keywords'),
+                'llm_error': llm_result.get('llm_error')
+            }
+            results.append(result_entry)
     
     # Store results in session state
     st.session_state.evaluation_results = results
@@ -847,11 +1099,14 @@ if st.button("🚀 Start Evaluation", type="primary", use_container_width=True):
         json_path = os.path.join(output_dir, json_filename)
         
         # Prepare JSON data
+        unique_resumes = len(set(r.get('resume_file', '') for r in results))
         json_data = {
             'evaluation_timestamp': timestamp,
-            'total_resumes': len(results),
-            'evaluation_mode': 'individual_top_job_per_resume',
-            'description': 'Each resume is matched with its top matching job from database (same logic as Resume Matching page)',
+            'total_resumes': unique_resumes,
+            'total_evaluations': len(results),
+            'top_jobs_per_resume': top_jobs_count,
+            'evaluation_mode': f'top_{top_jobs_count}_jobs_per_resume',
+            'description': f'Each resume is matched with its top {top_jobs_count} matching jobs from database (same logic as Resume Matching page). Total evaluations = {top_jobs_count} × number of resumes.',
             'results': results
         }
         
@@ -865,7 +1120,8 @@ if st.button("🚀 Start Evaluation", type="primary", use_container_width=True):
     
     progress_bar.empty()
     status_text.empty()
-    st.success(f"✅ Evaluation complete! Processed {len(results)} resumes.")
+    unique_resumes = len(set(r.get('resume_file', '') for r in results))
+    st.success(f"✅ Evaluation complete! Processed {unique_resumes} resumes with {len(results)} total evaluations (top {top_jobs_count} jobs per resume).")
 
 # Display results
 if st.session_state.get("evaluation_results"):
@@ -881,9 +1137,11 @@ if st.session_state.get("evaluation_results"):
     df = df.sort_values('final_score', ascending=False)
     
     # Summary metrics
+    unique_resumes = df['resume_file'].nunique() if 'resume_file' in df.columns else len(df)
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        st.metric("Total Resumes", len(df))
+        st.metric("Total Resumes", unique_resumes)
+        st.caption(f"Total Evaluations: {len(df)}")
     with col2:
         avg_final = df['final_score'].mean()
         st.metric("Avg Final Score", f"{avg_final:.3f}")
@@ -938,7 +1196,7 @@ if st.session_state.get("evaluation_results"):
     
     # Select columns for display
     display_columns = [
-        'resume_file', 'job_title', 'job_company', 'Final Score %', 'Skill Score %', 
+        'resume_file', 'job_rank', 'job_title', 'job_company', 'Final Score %', 'Skill Score %', 
         'Semantic Score %', 'Topic Score %',
         'resume_skills_count', 'job_skills_count', 'matching_skills_count'
     ]
@@ -947,7 +1205,7 @@ if st.session_state.get("evaluation_results"):
     if 'LLM Match' in display_df.columns:
         display_columns.append('LLM Match')
     
-    # Add rank column
+    # Add overall rank column
     display_df['Rank'] = range(1, len(display_df) + 1)
     display_columns = ['Rank'] + display_columns
     
@@ -957,34 +1215,51 @@ if st.session_state.get("evaluation_results"):
         height=600
     )
     
-    # Expandable details for each resume
+    # Expandable details for each resume (grouped by resume, showing all 3 jobs)
     st.markdown("#### Resume Details")
     
-    for idx, row in df.iterrows():
-        final_score_pct = row['final_score'] * 100
+    # Group by resume file
+    grouped = df.groupby('resume_file')
+    
+    for resume_file, resume_group in grouped:
+        # Sort by job_rank to show jobs in order (1, 2, 3)
+        resume_group = resume_group.sort_values('job_rank')
         
-        # Color coding
-        if final_score_pct >= 75:
+        # Get best score for color coding
+        best_score = resume_group['final_score'].max() * 100
+        
+        # Color coding based on best match
+        if best_score >= 75:
             color = "🟢"
-        elif final_score_pct >= 60:
+        elif best_score >= 60:
             color = "🟡"
         else:
             color = "🟠"
         
-        with st.expander(f"{color} {row['resume_file']} - {final_score_pct:.1f}% Match"):
-            # Job information header
-            if 'job_title' in row and row.get('job_title') != 'N/A':
-                st.markdown(f"**Matched Job:** {row.get('job_title', 'N/A')} at {row.get('job_company', 'N/A')} (ID: {row.get('job_id', 'N/A')})")
-                st.markdown("---")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
+        num_jobs = len(resume_group)
+        with st.expander(f"{color} {resume_file} - Top {num_jobs} Matches (Best: {best_score:.1f}%)"):
+            # Show all jobs for this resume
+            for job_idx, (_, row) in enumerate(resume_group.iterrows(), start=1):
+                job_rank = row.get('job_rank', job_idx)
+                final_score_pct = row['final_score'] * 100
+                
+                st.markdown(f"### Job Match #{job_rank} - {final_score_pct:.1f}%")
+                
+                # Job information header
+                if 'job_title' in row and row.get('job_title') != 'N/A':
+                    st.markdown(f"**Job:** {row.get('job_title', 'N/A')} at {row.get('job_company', 'N/A')} (ID: {row.get('job_id', 'N/A')})")
+                
+                # Use single column layout to prevent text cutoff
                 st.markdown("**Scores:**")
                 st.write(f"- Final Score: {final_score_pct:.2f}%")
                 st.write(f"- Skill Score: {row['skill_score'] * 100:.2f}%")
                 st.write(f"- Semantic Score: {row['semantic_score'] * 100:.2f}%")
                 st.write(f"- Topic Score: {row['topic_score'] * 100:.2f}%")
+                
+                st.markdown("**Skills:**")
+                st.write(f"- Resume Skills: {row['resume_skills_count']}")
+                st.write(f"- Job Skills: {row['job_skills_count']}")
+                st.write(f"- Matching Skills: {row['matching_skills_count']}")
                 
                 # LLM evaluation
                 if 'llm_match' in row and row['llm_match'] is not None:
@@ -1009,15 +1284,13 @@ if st.session_state.get("evaluation_results"):
                         st.code(keywords_str, language=None)
                 elif row.get('llm_error'):
                     st.warning(f"LLM Error: {row['llm_error']}")
-            
-            with col2:
-                st.markdown("**Skills:**")
-                st.write(f"- Resume Skills: {row['resume_skills_count']}")
-                st.write(f"- Job Skills: {row['job_skills_count']}")
-                st.write(f"- Matching Skills: {row['matching_skills_count']}")
-            
-            if row.get('error'):
-                st.error(f"Error: {row['error']}")
+                
+                if row.get('error'):
+                    st.error(f"Error: {row['error']}")
+                
+                # Add separator between jobs (except for last one)
+                if job_idx < len(resume_group):
+                    st.markdown("---")
     
     # Export results
     st.markdown("---")
@@ -1050,7 +1323,7 @@ if st.session_state.get("evaluation_results"):
         export_df['Rank'] = range(1, len(export_df) + 1)
         
         export_columns = [
-            'Rank', 'resume_file', 'job_title', 'job_company', 'job_id',
+            'Rank', 'resume_file', 'job_rank', 'job_title', 'job_company', 'job_id',
             'Final Score', 'Skill Score', 
             'Semantic Score', 'Topic Score', 'LLM Match', 'LLM Reasoning',
             'LLM Recommendations', 'LinkedIn Keywords',
@@ -1115,15 +1388,15 @@ st.markdown("""
 ### ℹ️ How It Works
 
 1. **Resume Processing**: Extracts text from all PDF files in `workspace/Resume_testing/`
-2. **Top Job Matching**: For each resume, finds its top matching job from the database using the same logic as Resume Matching page:
+2. **Top Job Matching**: For each resume, finds its top N matching jobs from the database using the same logic as Resume Matching page (N is configurable via slider, range 1-10):
    - Generates SBERT embedding for the resume
    - Uses vector search to find similar jobs
    - Applies skill scoring and combined scoring
-   - Returns the top matching job for that resume
+   - Returns the top N matching jobs for that resume
 3. **Evaluation**: For each resume-job pair, computes:
-   - **Skill Score (NER)**: Jaccard similarity between resume and job skills
+   - **Skill Score (Keyword-based)**: Jaccard similarity between resume and job skills
    - **Semantic Score**: Cosine similarity of SBERT embeddings
-   - **Topic Score**: Currently uses semantic score as proxy
+   - **Topic Score**: Cosine similarity of LSA 100 topics model distributions (falls back to semantic if model not available)
    - **Final Score**: Average(topic, semantic) + (1 - average) × Skill Score
 4. **LLM Evaluation**: If enabled, uses AI to assess match quality:
    - **Yes/No Assessment**: Determines if resume is a good match
