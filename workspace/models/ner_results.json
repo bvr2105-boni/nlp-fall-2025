@@ -1,0 +1,263 @@
+{
+  "total_entities": 491802,
+  "unique_skills": 482,
+  "unique_orgs": 223337,
+  "skill_counts": [
+    [
+      "communication",
+      7019
+    ],
+    [
+      "software development",
+      4038
+    ],
+    [
+      "collaboration",
+      3712
+    ],
+    [
+      "leadership",
+      3577
+    ],
+    [
+      "python",
+      3212
+    ],
+    [
+      "agile",
+      2820
+    ],
+    [
+      "aws",
+      2752
+    ],
+    [
+      "javascript",
+      2628
+    ],
+    [
+      "react",
+      2495
+    ],
+    [
+      "java",
+      2370
+    ],
+    [
+      "ci/cd",
+      2340
+    ],
+    [
+      "typescript",
+      2181
+    ],
+    [
+      "sql",
+      1980
+    ],
+    [
+      "azure",
+      1930
+    ],
+    [
+      "reporting",
+      1677
+    ],
+    [
+      "kubernetes",
+      1502
+    ],
+    [
+      "attention to detail",
+      1496
+    ],
+    [
+      "git",
+      1496
+    ],
+    [
+      "docker",
+      1486
+    ],
+    [
+      "go",
+      1410
+    ],
+    [
+      "problem-solving skills",
+      1390
+    ],
+    [
+      "mentoring",
+      1178
+    ],
+    [
+      "microservices",
+      1136
+    ],
+    [
+      "angular",
+      1112
+    ],
+    [
+      "excel",
+      1107
+    ],
+    [
+      "c#",
+      1071
+    ],
+    [
+      "gcp",
+      1050
+    ],
+    [
+      "node.js",
+      1006
+    ],
+    [
+      "c++",
+      974
+    ],
+    [
+      "machine learning",
+      962
+    ]
+  ],
+  "entity_counts": [
+    [
+      "ORG",
+      223337
+    ],
+    [
+      "PERSON",
+      70559
+    ],
+    [
+      "GPE",
+      60873
+    ],
+    [
+      "DATE",
+      45739
+    ],
+    [
+      "CARDINAL",
+      28931
+    ],
+    [
+      "MONEY",
+      11000
+    ],
+    [
+      "NORP",
+      9916
+    ],
+    [
+      "PRODUCT",
+      9095
+    ],
+    [
+      "WORK_OF_ART",
+      6756
+    ],
+    [
+      "LOC",
+      4809
+    ],
+    [
+      "TIME",
+      4408
+    ],
+    [
+      "ORDINAL",
+      4316
+    ],
+    [
+      "PERCENT",
+      4195
+    ],
+    [
+      "FAC",
+      2905
+    ],
+    [
+      "LANGUAGE",
+      2021
+    ]
+  ],
+  "skill_categories": [
+    [
+      "Other",
+      35821
+    ],
+    [
+      "Soft Skills",
+      17917
+    ],
+    [
+      "Programming Languages",
+      16524
+    ],
+    [
+      "Cloud & DevOps",
+      14363
+    ],
+    [
+      "Frameworks & Libraries",
+      6574
+    ],
+    [
+      "Databases",
+      6039
+    ],
+    [
+      "Data Tools",
+      1834
+    ],
+    [
+      "Enterprise Tools",
+      1786
+    ],
+    [
+      "Product & Design",
+      1706
+    ],
+    [
+      "Machine Learning",
+      1170
+    ],
+    [
+      "Testing & QA",
+      1120
+    ],
+    [
+      "Business Skills",
+      1077
+    ],
+    [
+      "BI & Visualization",
+      850
+    ],
+    [
+      "Marketing & Sales",
+      831
+    ],
+    [
+      "Security",
+      401
+    ],
+    [
+      "NLP & AI",
+      290
+    ]
+  ],
+  "model_used": "en_core_web_lg",
+  "config": {
+    "word_boundaries": false,
+    "overlap_resolution": true,
+    "context_filter": false,
+    "batch_processing": true
+  },
+  "saved_at": "2025-11-28T13:56:29.014157"
+}

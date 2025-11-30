@@ -28,6 +28,7 @@ pre-commit
 psycopg2-binary
 pycountry
 pypdf
+reportlab
 pytest
 python-dotenv
 python-pptx
@@ -57,3 +58,12 @@ vecstack
 watchdog
 wordcloud
 xgboost
+python-jobspy
+markdownify
+beautifulsoup4
+pydantic
+tls-client
+regex
+selenium>=4.16.0
+wheel
+pytest

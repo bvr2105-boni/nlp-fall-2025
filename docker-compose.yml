@@ -28,6 +28,7 @@ services:
       - ./workspace:/home/jovyan
       - ~/Documents:/home/jovyan/Documents
       - ~/Downloads:/home/jovyan/Downloads
+      - ./linkedin-jobs-scraper:/home/jovyan/linkedin-jobs-scraper
     ports:
       - 48888:8888
       - 45001:5001
@@ -50,6 +51,9 @@ services:
     volumes:
       - ./app-streamlit:/usr/src/app
       - ./workspace:/workspace
+      - ./linkedin-jobs-scraper:/home/jovyan/linkedin-jobs-scraper
+      - ./backups:/usr/src/backups
+      - .env:/usr/src/app/.env
     ports:
       - 48501:18501
     environment:

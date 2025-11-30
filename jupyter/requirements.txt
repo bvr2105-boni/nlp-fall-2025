@@ -11,6 +11,7 @@ seaborn
 scikit_learn
 xgboost
 statsmodels
+spacy
 chardet
 
 click
@@ -49,3 +50,13 @@ psycopg2-binary
 dash-ag-grid
 cartopy
 pycountry
+python-jobspy
+markdownify
+requests
+beautifulsoup4
+pydantic
+tls-client
+regex
+selenium>=4.16.0
+wheel
+pytest

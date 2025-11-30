@@ -166,7 +166,7 @@ with tab2:
         # Top job titles
         if 'Job Title' in df.columns:
             st.markdown("#### Top Job Titles")
-            top_titles = df['Job Title'].value_counts().head(50)
+            top_titles = df['Job Title'].value_counts().head(20)
             
             fig = px.bar(
                 x=top_titles.values,
@@ -175,7 +175,8 @@ with tab2:
                 labels={'x': 'Number of Postings', 'y': 'Job Title'},
                 title='Top 20 Job Titles'
             )
-            fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+            fig.update_traces(hoverinfo='none')
+            fig.update_layout(yaxis={'categoryorder': 'total ascending'}, height=600)
             st.plotly_chart(fig, use_container_width=True)
         
         # Description length analysis
@@ -222,7 +223,7 @@ with tab3:
         # Top companies
         if 'Company' in df.columns:
             st.markdown("#### Top Companies by Job Postings")
-            top_companies = df['Company'].value_counts().head(50)
+            top_companies = df['Company'].value_counts().head(20)
             
             fig = px.bar(
                 x=top_companies.values,
@@ -231,7 +232,8 @@ with tab3:
                 labels={'x': 'Number of Job Postings', 'y': 'Company'},
                 title='Top 20 Companies'
             )
-            fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+            fig.update_traces(hoverinfo='none')
+            fig.update_layout(yaxis={'categoryorder': 'total ascending'}, height=600)
             st.plotly_chart(fig, use_container_width=True)
         
         # Insights analysis (location, work type, etc.)

@@ -223,13 +223,13 @@ def load_sbert_model():
         print("Using CPU for SBERT")
 
     try:
-        model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device=device)
+        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device=device)
         return model
     except Exception as e:
         print(f"Failed to load model on {device}: {e}")
         # Fallback to CPU
         try:
-            model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device="cpu")
+            model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cpu")
             return model
         except Exception as e2:
             print(f"Failed to load model on CPU: {e2}")
@@ -341,7 +341,7 @@ def train_word2vec_model(job_texts, resume_texts, save_model=True):
     # Train model
     model = Word2Vec(
         sentences=training_corpus,
-        vector_size=300,
+        vector_size=1536,  # Updated to 1536 dimensions for database compatibility
         window=5,
         min_count=10,
         workers=4,
@@ -354,7 +354,7 @@ def train_word2vec_model(job_texts, resume_texts, save_model=True):
         model_data = {
             'model': model,
             'trained_at': datetime.now().isoformat(),
-            'vector_size': 300,
+            'vector_size': 1536,  # Updated to match training configuration
             'window': 5,
             'min_count': 10,
             'sg': 1,
@@ -368,11 +368,14 @@ def train_word2vec_model(job_texts, resume_texts, save_model=True):
 def get_doc_embedding_w2v(tokens, model):
     """Get document embedding using Word2Vec"""
     if not GENSIM_AVAILABLE or model is None:
-        return np.zeros(300, dtype="float32")
+        # Get vector size from model if available, otherwise default to 1536
+        vector_size = getattr(model, 'vector_size', 1536) if model else 1536
+        return np.zeros(vector_size, dtype="float32")
 
     vectors = [model.wv[word] for word in tokens if word in model.wv]
     if not vectors:
-        return np.zeros(300, dtype="float32")
+        vector_size = getattr(model, 'vector_size', 1536)
+        return np.zeros(vector_size, dtype="float32")
     return np.mean(vectors, axis=0)
 
 @st.cache_data

@@ -1108,8 +1108,8 @@ def setup_jobs_table():
                     title TEXT,
                     company TEXT,
                     text TEXT,
-                    embedding vector(768),  -- SBERT dimension
-                    word2vec_embedding vector(300),  -- Word2Vec dimension
+                    embedding vector(384),           -- SBERT dimension (all-MiniLM-L6-v2)
+                    word2vec_embedding vector(300),  -- Word2Vec dimension (typical vector_size)
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
                 
@@ -1121,6 +1121,262 @@ def setup_jobs_table():
         return True
     except Exception as e:
         print(f"Error setting up jobs table: {e}")
+        return False
+
+
+def drop_jobs_table():
+    """Drop the jobs table (and related indexes) if it exists."""
+    engine = create_db_engine()
+    if engine is None:
+        return False
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS jobs CASCADE;"))
+            conn.commit()
+        print("Jobs table dropped successfully (if it existed).")
+        return True
+    except Exception as e:
+        print(f"Error dropping jobs table: {e}")
+        return False
+
+
+def reset_jobs_table():
+    """Convenience helper: drop the jobs table and recreate it."""
+    dropped = drop_jobs_table()
+    if not dropped:
+        return False
+    return setup_jobs_table()
+
+
+def backup_jobs_table(suffix: str | None = None) -> str | None:
+    """
+    Create a backup copy of the current jobs table.
+    
+    - If suffix is provided, backup table will be named jobs_backup_<suffix>
+    - Otherwise, a timestamp-based suffix is used (e.g. jobs_backup_20251129_153045)
+    
+    Returns the backup table name on success, or None on failure.
+    """
+    engine = create_db_engine()
+    if engine is None:
+        return None
+
+    from datetime import datetime
+
+    if suffix:
+        safe_suffix = "".join(c for c in suffix if c.isalnum() or c in ("_", "-")).strip("_-")
+        if not safe_suffix:
+            safe_suffix = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    else:
+        safe_suffix = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+
+    backup_table = f"jobs_backup_{safe_suffix}"
+
+    try:
+        with engine.connect() as conn:
+            # Create a full copy of the jobs table
+            conn.execute(
+                text(f"CREATE TABLE IF NOT EXISTS {backup_table} AS TABLE jobs WITH DATA;")
+            )
+            conn.commit()
+        print(f"Jobs table backed up to '{backup_table}'.")
+        return backup_table
+    except Exception as e:
+        print(f"Error backing up jobs table: {e}")
+        return None
+
+
+def backup_jobs_to_file(suffix: str | None = None) -> str | None:
+    """
+    Export the current jobs table to a CSV file in a local backups folder.
+    
+    - Files are written under <project_root>/backups/
+    - File name pattern: jobs_backup_<timestamp>.csv (or with custom suffix)
+    
+    Returns the absolute file path on success, or None on failure.
+    """
+    engine = create_db_engine()
+    if engine is None:
+        return None
+
+    from datetime import datetime
+
+    # Determine project root based on this file's location
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.join(current_dir, "..", "..")
+    backups_dir = os.path.join(project_root, "backups")
+
+    try:
+        os.makedirs(backups_dir, exist_ok=True)
+    except Exception as e:
+        print(f"Error creating backups directory: {e}")
+        return None
+
+    if suffix:
+        safe_suffix = "".join(c for c in suffix if c.isalnum() or c in ("_", "-")).strip("_-")
+        if not safe_suffix:
+            safe_suffix = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    else:
+        safe_suffix = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+
+    filename = f"jobs_backup_{safe_suffix}.csv"
+    file_path = os.path.abspath(os.path.join(backups_dir, filename))
+
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql("SELECT * FROM jobs", conn)
+        df.to_csv(file_path, index=False)
+        print(f"Jobs table exported to '{file_path}'.")
+        return file_path
+    except Exception as e:
+        print(f"Error exporting jobs table to file: {e}")
+        return None
+
+
+def backup_jobs_to_sql(suffix: str | None = None) -> str | None:
+    """
+    Export the current jobs table to a SQL file in a local backups folder.
+    
+    The SQL file will contain INSERT statements (and a TRUNCATE) that can be
+    run against an existing jobs table with the same schema.
+    
+    Returns the absolute file path on success, or None on failure.
+    """
+    engine = create_db_engine()
+    if engine is None:
+        return None
+
+    from datetime import datetime
+
+    # Determine project root based on this file's location
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.join(current_dir, "..", "..")
+    backups_dir = os.path.join(project_root, "backups")
+
+    try:
+        os.makedirs(backups_dir, exist_ok=True)
+    except Exception as e:
+        print(f"Error creating backups directory: {e}")
+        return None
+
+    if suffix:
+        safe_suffix = "".join(c for c in suffix if c.isalnum() or c in ("_", "-")).strip("_-")
+        if not safe_suffix:
+            safe_suffix = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    else:
+        safe_suffix = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+
+    filename = f"jobs_backup_{safe_suffix}.sql"
+    file_path = os.path.abspath(os.path.join(backups_dir, filename))
+
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql("SELECT * FROM jobs", conn)
+
+        if df.empty:
+            # Still create an empty backup file with a comment
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write("-- jobs table is empty; no data to backup\n")
+            print(f"Jobs table is empty; created placeholder SQL at '{file_path}'.")
+            return file_path
+
+        columns = list(df.columns)
+
+        def sql_literal(value):
+            if value is None or (isinstance(value, float) and np.isnan(value)):
+                return "NULL"
+            # Numeric types
+            if isinstance(value, (int, float, np.integer, np.floating)):
+                return str(value)
+            # Everything else as string literal
+            s = str(value)
+            s = s.replace("'", "''")  # escape single quotes
+            return f"'{s}'"
+
+        lines = []
+        lines.append("-- Backup of jobs table data")
+        lines.append("BEGIN;")
+        lines.append("TRUNCATE TABLE jobs;")
+
+        col_list_sql = ", ".join(columns)
+
+        for _, row in df.iterrows():
+            values_sql = ", ".join(sql_literal(row[col]) for col in columns)
+            lines.append(f"INSERT INTO jobs ({col_list_sql}) VALUES ({values_sql});")
+
+        lines.append("COMMIT;")
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+
+        print(f"Jobs table exported as SQL to '{file_path}'.")
+        return file_path
+    except Exception as e:
+        print(f"Error exporting jobs table to SQL: {e}")
+        return None
+
+
+def restore_jobs_from_latest_sql_backup() -> bool:
+    """
+    Find the most recent jobs_backup_*.sql file in the backups folder
+    and execute it against the current database.
+    
+    Assumes the jobs table schema already exists.
+    
+    Returns True on success, False on failure or if no backup is found.
+    """
+    engine = create_db_engine()
+    if engine is None:
+        return False
+
+    # Determine project root and backups dir
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.join(current_dir, "..", "..")
+    backups_dir = os.path.join(project_root, "backups")
+
+    if not os.path.isdir(backups_dir):
+        print("No backups directory found; nothing to restore.")
+        return False
+
+    # Find all jobs_backup_*.sql files and pick the newest by modified time
+    candidates = []
+    for name in os.listdir(backups_dir):
+        if name.startswith("jobs_backup_") and name.endswith(".sql"):
+            full_path = os.path.join(backups_dir, name)
+            try:
+                mtime = os.path.getmtime(full_path)
+                candidates.append((mtime, full_path))
+            except OSError:
+                continue
+
+    if not candidates:
+        print("No SQL backup files found to restore.")
+        return False
+
+    latest_path = max(candidates, key=lambda x: x[0])[1]
+
+    try:
+        with open(latest_path, "r", encoding="utf-8") as f:
+            sql_content = f.read()
+
+        if not sql_content.strip():
+            print(f"Backup file '{latest_path}' is empty; nothing to restore.")
+            return False
+
+        # Use a raw DBAPI connection so we can execute multiple statements
+        raw_conn = engine.raw_connection()
+        try:
+            with raw_conn.cursor() as cur:
+                cur.execute(sql_content)
+            raw_conn.commit()
+        finally:
+            raw_conn.close()
+
+        print(f"Jobs table restored from '{latest_path}'.")
+        return True
+    except Exception as e:
+        print(f"Error restoring jobs table from SQL backup: {e}")
         return False
 
 def insert_job_with_multiple_embeddings(job_id: str, job_text: str, company: str = None, title: str = None, 
@@ -1167,8 +1423,13 @@ def batch_insert_jobs_with_embeddings(jobs_data: list):
             for job in jobs_data:
                 # Build dynamic query based on which embeddings are available
                 columns = ['id', 'title', 'company', 'text']
-                values = [job['id'], job['title'], job['company'], job['text']]
                 placeholders = [':id', ':title', ':company', ':text']
+                params = {
+                    'id': job['id'],
+                    'title': job.get('title'),
+                    'company': job.get('company'),
+                    'text': job.get('text')
+                }
 
                 update_parts = [
                     'title = EXCLUDED.title',
@@ -1178,14 +1439,24 @@ def batch_insert_jobs_with_embeddings(jobs_data: list):
 
                 if job.get('embedding') is not None:
                     columns.append('embedding')
-                    values.append('[' + ','.join(map(str, job['embedding'])) + ']')
                     placeholders.append(':embedding')
+                    # Convert to string format for pgvector
+                    emb = job['embedding']
+                    if hasattr(emb, 'tolist'):
+                        emb = emb.tolist()
+                    params['embedding'] = '[' + ','.join(map(str, emb)) + ']'
                     update_parts.append('embedding = EXCLUDED.embedding')
 
                 if job.get('word2vec_embedding') is not None:
                     columns.append('word2vec_embedding')
-                    values.append('[' + ','.join(map(str, job['word2vec_embedding'])) + ']')
                     placeholders.append(':word2vec_embedding')
+                    # Convert to string format for pgvector
+                    w2v_emb = job['word2vec_embedding']
+                    if hasattr(w2v_emb, 'tolist'):
+                        w2v_emb = w2v_emb.tolist()
+                    elif not isinstance(w2v_emb, (list, tuple)):
+                        w2v_emb = list(w2v_emb)
+                    params['word2vec_embedding'] = '[' + ','.join(map(str, w2v_emb)) + ']'
                     update_parts.append('word2vec_embedding = EXCLUDED.word2vec_embedding')
 
                 columns_str = ', '.join(columns)
@@ -1198,15 +1469,14 @@ def batch_insert_jobs_with_embeddings(jobs_data: list):
                     ON CONFLICT (id) DO UPDATE SET {update_str}
                 """)
 
-                # Create parameter dict
-                params = dict(zip([col for col in columns], values))
-
                 conn.execute(query, params)
 
             conn.commit()
         return True
     except Exception as e:
         print(f"Error batch inserting jobs: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def find_similar_jobs_vector(resume_embedding: list, embedding_type: str = 'sbert', top_k: int = 10) -> list:
