@@ -31,7 +31,7 @@ def test_run():
             options=QueryOptions(
                 filters=QueryFilters(
                     company_jobs_url='https://www.linkedin.com/jobs/search/?f_C=1441%2C17876832%2C791962%2C2374003%2C18950635%2C16140%2C10440912&geoId=92000000',
-                    time=TimeFilters.MONTH,
+                    time=TimeFilters.WEEK,
                     type=[TypeFilters.FULL_TIME, TypeFilters.INTERNSHIP, TypeFilters.CONTRACT],
                 )
             )
@@ -58,7 +58,7 @@ def test_run():
         #         skip_promoted_jobs=True,
         #         limit=3,
         #         filters=QueryFilters(
-        #             time=TimeFilters.MONTH,
+        #             time=TimeFilters.WEEK,
         #             relevance=RelevanceFilters.RELEVANT,
         #         )
         #     )

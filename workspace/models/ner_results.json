@@ -1,11 +1,11 @@
 {
   "total_entities": 491802,
-  "unique_skills": 482,
+  "unique_skills": 238,
   "unique_orgs": 223337,
   "skill_counts": [
     [
       "communication",
-      7019
+      7049
     ],
     [
       "software development",
@@ -13,7 +13,7 @@
     ],
     [
       "collaboration",
-      3712
+      3864
     ],
     [
       "leadership",
@@ -29,15 +29,11 @@
     ],
     [
       "aws",
-      2752
+      2784
     ],
     [
       "javascript",
       2628
-    ],
-    [
-      "react",
-      2495
     ],
     [
       "java",
@@ -48,20 +44,24 @@
       2340
     ],
     [
+      "sql",
+      2246
+    ],
+    [
       "typescript",
       2181
     ],
     [
-      "sql",
-      1980
-    ],
-    [
       "azure",
-      1930
+      1934
     ],
     [
       "reporting",
-      1677
+      1730
+    ],
+    [
+      "go",
+      1516
     ],
     [
       "kubernetes",
@@ -80,10 +80,6 @@
       1486
     ],
     [
-      "go",
-      1410
-    ],
-    [
       "problem-solving skills",
       1390
     ],
@@ -96,14 +92,6 @@
       1136
     ],
     [
-      "angular",
-      1112
-    ],
-    [
-      "excel",
-      1107
-    ],
-    [
       "c#",
       1071
     ],
@@ -112,16 +100,28 @@
       1050
     ],
     [
-      "node.js",
-      1006
-    ],
-    [
       "c++",
       974
     ],
     [
       "machine learning",
       962
+    ],
+    [
+      "github",
+      934
+    ],
+    [
+      "project management",
+      916
+    ],
+    [
+      "scrum",
+      902
+    ],
+    [
+      "distributed systems",
+      883
     ]
   ],
   "entity_counts": [
@@ -189,75 +189,67 @@
   "skill_categories": [
     [
       "Other",
-      35821
+      30402
     ],
     [
       "Soft Skills",
-      17917
+      18099
     ],
     [
       "Programming Languages",
-      16524
+      14633
     ],
     [
       "Cloud & DevOps",
-      14363
-    ],
-    [
-      "Frameworks & Libraries",
-      6574
+      13214
     ],
     [
       "Databases",
-      6039
-    ],
-    [
-      "Data Tools",
-      1834
+      5815
     ],
     [
       "Enterprise Tools",
-      1786
-    ],
-    [
-      "Product & Design",
-      1706
+      1537
     ],
     [
       "Machine Learning",
       1170
     ],
     [
-      "Testing & QA",
-      1120
-    ],
-    [
       "Business Skills",
-      1077
-    ],
-    [
-      "BI & Visualization",
-      850
+      1090
     ],
     [
       "Marketing & Sales",
-      831
+      835
     ],
     [
-      "Security",
-      401
+      "BI & Visualization",
+      812
+    ],
+    [
+      "Product & Design",
+      803
+    ],
+    [
+      "Data Tools",
+      532
     ],
     [
       "NLP & AI",
       290
+    ],
+    [
+      "Frameworks & Libraries",
+      171
     ]
   ],
   "model_used": "en_core_web_lg",
   "config": {
     "word_boundaries": false,
-    "overlap_resolution": true,
+    "overlap_resolution": false,
     "context_filter": false,
     "batch_processing": true
   },
-  "saved_at": "2025-11-28T13:56:29.014157"
+  "saved_at": "2025-12-02T18:58:44.421640"
 }

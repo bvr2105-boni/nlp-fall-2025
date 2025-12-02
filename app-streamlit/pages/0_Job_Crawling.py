@@ -10,16 +10,21 @@ from linkedin_jobs_scraper.query import Query, QueryOptions, QueryFilters
 from linkedin_jobs_scraper.filters import RelevanceFilters, TimeFilters, TypeFilters, ExperienceLevelFilters, \
     OnSiteOrRemoteFilters, SalaryBaseFilters
 import logging
+from components.header import setup_page
 
 # Suppress logging
 logging.getLogger().setLevel(logging.ERROR)
 
-st.title("🔍 LinkedIn Job Crawling")
+st.title("Job Data Collection")
 
 st.markdown("""
-This page allows you to scrape job postings from LinkedIn based on selected job titles.
-The scraper uses LinkedIn's job search and extracts job details including title, company, description, and more.
-""")
+<div style="margin-bottom: 2rem;">
+    <p style="color: #6b7280; font-size: 1.1rem; line-height: 1.6;">
+        Collect job postings from LinkedIn to build your analysis dataset.
+        Choose job titles and let our automated scraper gather comprehensive job information for market insights.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # Define job titles
 job_titles = [
@@ -144,7 +149,7 @@ if st.button("Start Scraping", type="primary"):
                         limit=max_jobs,
                         filters=QueryFilters(
                             relevance=RelevanceFilters.RECENT,
-                            time=TimeFilters.MONTH,
+                            time=TimeFilters.WEEK,
                             type=[TypeFilters.FULL_TIME, TypeFilters.INTERNSHIP],
                             on_site_or_remote=[OnSiteOrRemoteFilters.REMOTE],
                             experience=[ExperienceLevelFilters.MID_SENIOR],

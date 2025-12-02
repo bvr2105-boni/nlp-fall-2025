@@ -403,14 +403,15 @@ html, body, [class*="css"] {
 
 /* Hero Section */
 .hero-container {
-    background: radial-gradient(circle at top right, #1e293b, #0f172a);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
     color: white;
-    padding: 2rem 2rem;
+    padding: 4rem 3rem;
     border-radius: 24px;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05);
     margin-bottom: 3rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .hero-bg-pattern {
@@ -419,9 +420,10 @@ html, body, [class*="css"] {
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-    background-size: 30px 30px;
-    opacity: 0.3;
+    background-image:
+        radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(245, 158, 11, 0.1) 0%, transparent 50%);
     pointer-events: none;
 }
 
@@ -429,42 +431,27 @@ html, body, [class*="css"] {
     position: relative;
     z-index: 10;
     display: grid;
-    grid-template-columns: 1.2fr 0.8fr;
-    gap: 4rem;
+    grid-template-columns: 1fr 0.8fr;
+    gap: 3rem;
     align-items: center;
 }
 
-.hero-badge {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    background: rgba(59, 130, 246, 0.2);
-    border: 1px solid rgba(59, 130, 246, 0.4);
-    border-radius: 9999px;
-    color: #93c5fd;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    margin-bottom: 1.5rem;
-    backdrop-filter: blur(4px);
-}
-
 .hero-title {
-    font-size: 3.5rem;
-    font-weight: 800;
+    font-size: 3rem;
+    font-weight: 700;
     line-height: 1.1;
     margin-bottom: 1.5rem;
-    background: linear-gradient(to right, #ffffff, #94a3b8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #ffffff;
+    letter-spacing: -0.02em;
 }
 
 .hero-description {
     font-size: 1.125rem;
-    line-height: 1.75;
+    line-height: 1.7;
     color: #cbd5e1;
     margin-bottom: 2rem;
-    max-width: 90%;
+    max-width: 100%;
+    font-weight: 400;
 }
 
 /* Metrics Grid in Hero */
@@ -475,33 +462,35 @@ html, body, [class*="css"] {
 }
 
 .metric-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 0.5rem;
-    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 1.5rem;
+    border-radius: 12px;
     backdrop-filter: blur(10px);
     text-align: center;
-    transition: transform 0.2s;
+    transition: all 0.2s ease;
 }
 
 .metric-card:hover {
-    background: rgba(255, 255, 255, 0.08);
-    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
 }
 
 .metric-label {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: #94a3b8;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
+    font-weight: 500;
 }
 
 .metric-value {
-    font-size: 1.75rem;
+    font-size: 2rem;
     font-weight: 700;
     color: white;
     margin-bottom: 0.25rem;
+    letter-spacing: -0.01em;
 }
 
 .metric-trend {
@@ -538,68 +527,60 @@ html, body, [class*="css"] {
 
 /* Navigation Cards */
 .nav-card {
-    background: var(--surface);
-    border-radius: 20px;
+    background: white;
+    border-radius: 16px;
     padding: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    border: 1px solid #e2e8f0;
-    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
     height: 100%;
     display: flex;
     flex-direction: column;
+    cursor: pointer;
 }
 
 .nav-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    border-color: var(--accent-light);
-}
-
-.nav-icon {
-    width: 48px;
-    height: 48px;
-    background: #eff6ff;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-    color: var(--accent);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border-color: #3b82f6;
 }
 
 .nav-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--primary);
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: #111827;
     margin-bottom: 0.75rem;
+    letter-spacing: -0.01em;
 }
 
 .nav-desc {
-    color: var(--text-muted);
+    color: #6b7280;
     line-height: 1.6;
     margin-bottom: 2rem;
     flex-grow: 1;
+    font-size: 0.95rem;
 }
 
 /* Button Styling Override */
 div[data-testid="stButton"] > button {
     width: 100%;
-    background-color: var(--surface);
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 10px;
-    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
     font-weight: 600;
-    transition: all 0.2s;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 div[data-testid="stButton"] > button:hover {
-    background-color: var(--accent);
-    color: white;
-    border-color: var(--accent);
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px -2px rgba(59, 130, 246, 0.3);
 }
 
 /* Feature/Value Cards */

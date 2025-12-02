@@ -12,6 +12,7 @@ import unicodedata
 from datetime import datetime
 
 from functions.nlp_config import TOPIC_MODEL_STOPWORDS, MASTER_SKILL_LIST
+from components.header import load_css, render_header
 
 # Add joblib import for model saving
 try:
@@ -25,6 +26,8 @@ from utils import initialize_workspace
 # Initialize workspace path and imports
 initialize_workspace()
 
+# Ensure theme and header are applied early
+load_css()
 # Try to import NLP libraries
 try:
     import spacy
@@ -1080,8 +1083,8 @@ def save_job_embeddings(embeddings, method, num_jobs):
     
     # Create filename based on method and number of jobs
     method_short = "w2v" if method == "Word2Vec" else "sbert"
-    embeddings_filename = f"job_embeddings_{method_short}_{num_jobs}jobs.npy"
-    metadata_filename = f"job_embeddings_{method_short}_{num_jobs}jobs_metadata.joblib"
+    embeddings_filename = f"job_embeddings_{method_short}_{num_jobs}_jobs.npy"
+    metadata_filename = f"job_embeddings_{method_short}_{num_jobs}_jobs_metadata.joblib"
     
     embeddings_path = os.path.join(models_dir, embeddings_filename)
     metadata_path = os.path.join(models_dir, metadata_filename)
@@ -1118,7 +1121,7 @@ def load_job_embeddings(method, num_jobs):
         return None, None
     
     method_short = "w2v" if method == "Word2Vec" else "sbert"
-    embeddings_filename = f"job_embeddings_{method_short}_{num_jobs}jobs.npy"
+    embeddings_filename = f"job_embeddings_{method_short}_{num_jobs}_jobs.npy"
     metadata_filename = f"job_embeddings_{method_short}_{num_jobs}jobs_metadata.joblib"
     
     embeddings_path = os.path.join(models_dir, embeddings_filename)
@@ -1149,8 +1152,8 @@ def delete_job_embeddings(method, num_jobs):
         return False
     
     method_short = "w2v" if method == "Word2Vec" else "sbert"
-    embeddings_filename = f"job_embeddings_{method_short}_{num_jobs}jobs.npy"
-    metadata_filename = f"job_embeddings_{method_short}_{num_jobs}jobs_metadata.joblib"
+    embeddings_filename = f"job_embeddings_{method_short}_{num_jobs}_jobs.npy"
+    metadata_filename = f"job_embeddings_{method_short}_{num_jobs}_jobs_metadata.joblib"
     
     embeddings_path = os.path.join(models_dir, embeddings_filename)
     metadata_path = os.path.join(models_dir, metadata_filename)
@@ -1182,7 +1185,7 @@ def list_all_saved_embeddings():
     for filename in os.listdir(models_dir):
         if filename.startswith('job_embeddings_') and filename.endswith('.npy'):
             # Extract method and num_jobs from filename
-            # Format: job_embeddings_{method}_{num_jobs}jobs.npy
+            # Format: job_embeddings_{method}_{num_jobs}_jobs.npy
             parts = filename.replace('job_embeddings_', '').replace('.npy', '').split('_')
             if len(parts) >= 2:
                 method_short = parts[0]
@@ -1438,7 +1441,17 @@ try:
 except Exception:
     pass
 
-st.title("NLP Analytics - Job Description Analysis")
+st.title("AI Analytics")
+
+# Professional introduction
+st.markdown("""
+<div style="margin-bottom: 2rem;">
+    <p style="color: #6b7280; font-size: 1.1rem; line-height: 1.6;">
+        Leverage advanced natural language processing to extract insights from job descriptions.
+        Identify skills, topics, and patterns using state-of-the-art machine learning techniques.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # Initialize session state
 if 'jobs_df' not in st.session_state:
@@ -1513,6 +1526,7 @@ def load_resume_data():
             return df
     return None
 
+
 # Tabs for different NLP tasks
 tab1, tab2, tab3 = st.tabs([
     "Named Entity Recognition",
@@ -1574,7 +1588,6 @@ with tab1:
                     st.error("❌ Could not load data")
     else:
         df = st.session_state.jobs_df
-        st.success(f"✅ Working with {len(df):,} job postings")
         
         # NER Configuration
         st.markdown("---")
@@ -1780,7 +1793,6 @@ with tab1:
                                 st.success(f"✅ Enhanced NER Analysis completed! Results saved to `{results_path}`")
                         else:
                             st.success("✅ Enhanced NER Analysis completed!")
-                        st.rerun()
         
         if st.session_state.ner_results:
             results = st.session_state.ner_results
@@ -1788,28 +1800,28 @@ with tab1:
             # Show if results were loaded from file or newly generated
             if st.session_state.get('ner_results_loaded', False):
                 saved_at = results.get('saved_at', 'Unknown')
-                st.info(f"📁 **Loaded saved results** (saved at: {saved_at})")
+                st.info(f"**Loaded saved results** (saved at: {saved_at})")
             else:
-                st.info("🆕 **Fresh analysis results**")
+                st.info("**Fresh analysis results**")
             
             # Add option to reload saved results
             col_reload, col_clear = st.columns([1, 1])
             with col_reload:
-                if st.button("🔄 Reload Saved Results", help="Reload the last saved NER results from file"):
+                if st.button("Reload Saved Results", help="Reload the last saved NER results from file"):
                     saved_results = load_ner_results()
                     if saved_results:
                         st.session_state.ner_results = saved_results
                         st.session_state.ner_results_loaded = True
-                        st.success("✅ Reloaded saved results!")
+                        st.success("Reloaded saved results!")
                         st.rerun()
                     else:
                         st.error("❌ No saved results found")
             
             with col_clear:
-                if st.button("🗑️ Clear Results", help="Clear current results from memory"):
+                if st.button("Clear Results", help="Clear current results from memory"):
                     st.session_state.ner_results = None
                     st.session_state.ner_results_loaded = False
-                    st.success("✅ Results cleared!")
+                    st.success("Results cleared!")
                     st.rerun()
             
             st.markdown("#### NER Results")
@@ -1829,7 +1841,7 @@ with tab1:
             # Configuration used
             if 'config' in results:
                 config = results['config']
-                st.info(f"⚙️ **Configuration**: Word Boundaries: {config['word_boundaries']} | "
+                st.info(f"**Configuration**: Word Boundaries: {config['word_boundaries']} | "
                        f"Overlap Resolution: {config['overlap_resolution']} | "
                        f"Context Filter: {config['context_filter']} | "
                        f"Batch Processing: {config['batch_processing']}")
@@ -2373,13 +2385,13 @@ with tab3:
         
         # Manage Saved Embeddings Section
         st.markdown("---")
-        st.markdown("#### 🗂️ Manage Saved Embeddings")
+        st.markdown("#### Manage Saved Embeddings")
         with st.expander("View and Delete All Saved Embeddings", expanded=False):
             saved_embeddings_list = list_all_saved_embeddings()
             if saved_embeddings_list:
                 st.write(f"**Found {len(saved_embeddings_list)} saved embedding file(s):**")
                 for emb_info in saved_embeddings_list:
-                    col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
+                    col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 1, 1])
                     with col1:
                         st.write(f"📁 {emb_info['filename']}")
                     with col2:
@@ -2387,168 +2399,37 @@ with tab3:
                     with col3:
                         st.write(f"**Jobs:** {emb_info['num_jobs']:,} | **Saved:** {emb_info['saved_at'][:10] if emb_info['saved_at'] != 'Unknown' else 'Unknown'}")
                     with col4:
-                        if st.button("🗑️ Delete", key=f"delete_emb_{emb_info['filename']}"):
+                        if st.button("Load", key=f"load_emb_{emb_info['filename']}"):
+                            try:
+                                saved_embeddings, saved_metadata = load_job_embeddings(emb_info['method'], emb_info['num_jobs'])
+                                if saved_embeddings is not None:
+                                    # Set the appropriate session state variable based on method
+                                    if emb_info['method'] == "Word2Vec":
+                                        st.session_state.job_embeddings_w2v = saved_embeddings
+                                    elif emb_info['method'] == "Sentence-BERT (SBERT)":
+                                        st.session_state.job_embeddings_sbert = saved_embeddings
+                                    st.success(f"Loaded {emb_info['filename']}")
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to load embeddings")
+                            except Exception as e:
+                                st.error(f"Failed to load embeddings: {e}")
+                    with col5:
+                        if st.button("Delete", key=f"delete_emb_{emb_info['filename']}"):
                             if delete_job_embeddings(emb_info['method'], emb_info['num_jobs']):
-                                st.success(f"🗑️ Deleted {emb_info['filename']}")
+                                st.success(f"Deleted {emb_info['filename']}")
                                 st.rerun()
                             else:
                                 st.error("Failed to delete")
                 st.markdown("---")
-                if st.button("🗑️ Delete All Saved Embeddings", key="delete_all_embeddings", type="secondary"):
+                if st.button("Delete All Saved Embeddings", key="delete_all_embeddings", type="secondary"):
                     deleted_count = 0
                     for emb_info in saved_embeddings_list:
                         if delete_job_embeddings(emb_info['method'], emb_info['num_jobs']):
                             deleted_count += 1
                     if deleted_count > 0:
-                        st.success(f"🗑️ Deleted {deleted_count} embedding file(s)")
+                        st.success(f"Deleted {deleted_count} embedding file(s)")
                         st.rerun()
             else:
                 st.info("No saved embeddings found.")
-        
-        st.markdown("#### Find Similar Jobs")
-        
-        # Option to use loaded resume text
-        resume_query_text = ""
-        if st.session_state.resumes_df is not None and len(st.session_state.resumes_df) > 0:
-            resume_df = st.session_state.resumes_df
-            # Try to find a text column (could be 'cleaned_text', 'text', 'resume_text', etc.)
-            text_col = None
-            for col in ['cleaned_text', 'text', 'resume_text', 'Resume Text']:
-                if col in resume_df.columns:
-                    text_col = col
-                    break
-            
-            if text_col:
-                resume_options = ["None - Enter text manually"] + [f"Resume {i+1}" for i in range(len(resume_df))]
-                selected_resume_idx = st.selectbox(
-                    "Select a resume to use as query",
-                    range(len(resume_options)),
-                    format_func=lambda x: resume_options[x],
-                    help="Choose a loaded resume to use as the search query, or select 'None' to enter text manually"
-                )
-                
-                if selected_resume_idx > 0:  # 0 is "None"
-                    actual_idx = selected_resume_idx - 1
-                    resume_query_text = resume_df.iloc[actual_idx][text_col]
-                    if pd.isna(resume_query_text):
-                        resume_query_text = ""
-        
-        query_text = st.text_area(
-            "Enter job description or resume text",
-            value=resume_query_text,
-            height=100,
-            placeholder="Paste a job description or resume text to find similar jobs..."
-        )
-        
-        top_k = st.slider("Number of similar jobs to show", 3, 20, 5)
-        
-        if st.button("Find Similar Jobs", type="primary"):
-            if not query_text:
-                st.error("Please enter some text")
-            elif embedding_method == "Word2Vec" and st.session_state.job_embeddings_w2v is None:
-                st.error("Please compute Word2Vec embeddings first")
-            elif embedding_method == "Sentence-BERT (SBERT)" and st.session_state.job_embeddings_sbert is None:
-                st.error("Please compute SBERT embeddings first")
-            else:
-                with st.spinner("Finding similar jobs..."):
-                    text_column = 'job_text_cleaned' if 'job_text_cleaned' in df.columns else 'Job Description'
-                    # Keep track of valid indices before dropping NaN
-                    valid_mask = df[text_column].notna()
-                    job_texts = df[text_column][valid_mask].tolist()
-                    valid_indices = df[valid_mask].index.tolist()
-                    
-                    if embedding_method == "Word2Vec":
-                        results = find_similar_jobs_w2v(query_text, job_texts, st.session_state.job_embeddings_w2v, df, valid_indices, top_k)
-                    else:
-                        results = find_similar_jobs_sbert(query_text, job_texts, st.session_state.job_embeddings_sbert, st.session_state.sbert_model, df, valid_indices, top_k)
-                    
-                    st.session_state.embedding_results = {
-                        'method': embedding_method,
-                        'query': query_text,
-                        'results': results
-                    }
-                    st.success("✅ Similar jobs found!")
-                    st.rerun()
-        
-        if st.session_state.embedding_results:
-            results = st.session_state.embedding_results
-            st.markdown("#### Similar Jobs Results")
-            st.success(f"✅ Found similar jobs using {results['method']}")
-            
-            # Ensure results are sorted by relevance (highest first)
-            sorted_results = sorted(
-                results['results'],
-                key=lambda job: job.get('combined_score', job.get('similarity', 0)),
-                reverse=True
-            )
-            
-            # Show results (highest similarity first)
-            for i, job in enumerate(sorted_results, 1):
-                with st.expander(f"Match {i}: Similarity {job['similarity']:.3f} - {job['job_title']}"):
-                    col1, col2 = st.columns([2, 1])
-                    
-                    with col1:
-                        st.markdown(f"**Job Title:** {job['job_title']}")
-                        st.markdown(f"**Company:** {job['company']}")
-                        if job['location'] != 'N/A':
-                            st.markdown(f"**Location:** {job['location']}, {job['country']}")
-                        elif job['country'] != 'N/A':
-                            st.markdown(f"**Country:** {job['country']}")
-                        if job['salary_range'] != 'N/A':
-                            st.markdown(f"**Salary Range:** {job['salary_range']}")
-                        if job['experience'] != 'N/A':
-                            st.markdown(f"**Experience:** {job['experience']}")
-                    
-                    with col2:
-                        if job['job_link'] != 'N/A':
-                            st.markdown(f"[🔗 Job Link]({job['job_link']})")
-                        if job['company_link'] != 'N/A':
-                            st.markdown(f"[🏢 Company Link]({job['company_link']})")
-                    
-                    st.markdown("**Job Description:**")
-                    st.write(job['job_description'])
-                    
-                    # Only show sections if they have meaningful content
-                    skills_val = job.get('skills', 'N/A')
-                    if skills_val and skills_val != 'N/A' and str(skills_val).lower() not in ['nan', 'none', '']:
-                        st.markdown("**Skills:**")
-                        st.write(skills_val)
-                    
-                    resp_val = job.get('responsibilities', 'N/A')
-                    if resp_val and resp_val != 'N/A' and str(resp_val).lower() not in ['nan', 'none', '']:
-                        st.markdown("**Responsibilities:**")
-                        st.write(resp_val)
-                    
-                    benefits_val = job.get('benefits', 'N/A')
-                    if benefits_val and benefits_val != 'N/A' and str(benefits_val).lower() not in ['nan', 'none', '']:
-                        st.markdown("**Benefits:**")
-                        st.write(benefits_val)
-
-# Footer
-st.markdown("---")
-st.markdown("""
-### 📚 Available Resources
-
-This Streamlit interface implements the NLP techniques from the following Jupyter notebooks:
-- **NER**: `workspace/NER/NER.ipynb` - Custom skill extraction using spaCy PhraseMatcher
-- **Topic Modeling**: 
-  - LDA: `workspace/Topic Modeling/TopicModeling_LDA.ipynb` - CountVectorizer + LDA
-  - LSA: `workspace/Topic Modeling/TopicModeling_LSA.ipynb` - TF-IDF + TruncatedSVD
-- **Word Embeddings**: 
-  - Word2Vec: `workspace/Word Embedding/Word Embedding_Word2Vector_UseDedup.ipynb` - Document embeddings for job matching
-  - SBERT: `workspace/Word Embedding/Word_Embedding_SBERT_UseDedup.ipynb` - Sentence-BERT for semantic similarity
-- **Resume Testing**: `workspace/Resume_testing/` - Resume-job matching examples
-
-**Database Integration:**
-- Jobs are stored in PostgreSQL with pgvector for vector similarity search
-- Resume-job matching uses OpenAI embeddings (1536 dimensions) and cosine similarity
-- Run `create_jobs_table.sql` to set up the database schema
-
-**Model Persistence:**
-- Topic models (LDA/LSA) are automatically saved to `workspace/models/` directory
-- Word2Vec models can be saved for future use and reloaded to avoid retraining
-- Saved models can be reloaded for faster analysis without retraining
-- Models are stored in joblib format with metadata
-
-**Note**: The implementations above use the cleaned datasets from `Data_Cleaning/cleaned_job_data_dedup.csv` and `Data_Cleaning/cleaned_resume.csv`.
-""")
+    

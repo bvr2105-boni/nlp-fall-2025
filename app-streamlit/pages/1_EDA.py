@@ -8,6 +8,7 @@ from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 from collections import Counter
+from components.header import render_header
 
 from utils import initialize_workspace
 
@@ -29,7 +30,7 @@ try:
 except Exception:
     pass
 
-st.title("📊 Exploratory Data Analysis - LinkedIn Job Postings")
+st.title("Exploratory Data Analysis")
 
 # Initialize session state for data
 if 'jobs_df' not in st.session_state:
@@ -65,51 +66,71 @@ def load_job_data():
                     return df
     return None
 
+# Add some spacing and better intro
+st.markdown("""
+<div style="margin-bottom: 2rem;">
+    <p style="color: #6b7280; font-size: 1.1rem; line-height: 1.6;">
+        Explore comprehensive insights from LinkedIn job postings. Analyze market trends, company distributions,
+        location patterns, and skill requirements to make data-driven career decisions.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
 # Tabs for different analyses
 tab1, tab2, tab3, tab4 = st.tabs([
-    "📁 Load Dataset", 
-    "📈 Job Market Overview", 
-    "💼 Company & Location Analysis", 
-    "🔍 Skills & Requirements"
+    "Load Data",
+    "Market Overview",
+    "Companies & Locations",
+    "Skills Analysis"
 ])
 
 with tab1:
-    st.markdown("### Load LinkedIn Job Dataset")
-    st.markdown("Load the scraped LinkedIn job postings for analysis.")
-    
-    if st.button("Load Job Data", type="primary"):
-        with st.spinner("Loading job data..."):
-            try:
-                df = load_job_data()
-                if df is not None:
-                    st.session_state.jobs_df = df
-                    st.session_state.data_loaded = True
-                    st.success(f"✅ Successfully loaded {len(df):,} job postings ({len(df.columns)} columns)")
-                    st.rerun()
-                else:
-                    st.error("❌ Could not find job data. Please ensure data files exist in workspace/Data/")
-            except Exception as e:
-                st.error(f"❌ Error loading data: {e}")
-    
+    st.markdown("### Load Job Dataset")
+    st.markdown("Import your LinkedIn job postings data to begin analysis.")
+
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        if st.button("Load Job Data", type="primary"):
+            with st.spinner("Loading job data..."):
+                try:
+                    df = load_job_data()
+                    if df is not None:
+                        st.session_state.jobs_df = df
+                        st.session_state.data_loaded = True
+                        st.success(f"✅ Successfully loaded {len(df):,} job postings")
+                        st.rerun()
+                    else:
+                        st.error("❌ Could not find job data. Please ensure data files exist in workspace/Data/")
+                except Exception as e:
+                    st.error(f"❌ Error loading data: {e}")
+
+    with col2:
+        if st.session_state.data_loaded and st.session_state.jobs_df is not None:
+            df = st.session_state.jobs_df
+            st.success(f"✅ Dataset ready: {len(df):,} job postings loaded")
+
     if st.session_state.data_loaded and st.session_state.jobs_df is not None:
         df = st.session_state.jobs_df
-        st.success(f"✅ Dataset loaded: {len(df):,} job postings")
-        
-        # Display basic info
-        st.markdown("### Dataset Overview")
-        col1, col2, col3 = st.columns(3)
+
+        # Key metrics in a nice grid
+        st.markdown("### Key Metrics")
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Total Jobs", f"{len(df):,}")
         with col2:
             if 'Company' in df.columns:
-                st.metric("Unique Companies", f"{df['Company'].nunique():,}")
+                st.metric("Companies", f"{df['Company'].nunique():,}")
         with col3:
             if 'Job Title' in df.columns:
-                st.metric("Unique Job Titles", f"{df['Job Title'].nunique():,}")
-        
-        # Display sample data
-        st.markdown("### Sample Data")
-        st.dataframe(df.head(30), use_container_width=True)
+                st.metric("Job Titles", f"{df['Job Title'].nunique():,}")
+        with col4:
+            if 'Description' in df.columns:
+                avg_length = df['Description'].str.len().mean()
+                st.metric("Avg Description", f"{avg_length:.0f} chars")
+
+        # Sample data preview
+        st.markdown("### Data Preview")
+        st.dataframe(df.head(10), use_container_width=True)
         
         # Column information
         with st.expander("📋 Column Information"):

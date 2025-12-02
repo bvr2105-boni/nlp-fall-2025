@@ -4,7 +4,9 @@ import numpy as np
 import sys
 import os
 import json
+from datetime import datetime
 
+from components.header import render_header
 from utils import initialize_workspace
 
 # Initialize workspace path and imports
@@ -25,7 +27,7 @@ try:
 except Exception:
     pass
 
-st.title("📊 Import Word2Vec Embeddings to Database")
+st.title("Import Embeddings to Database")
 
 # Try to import NLP libraries
 try:
@@ -41,6 +43,13 @@ try:
     SBERT_AVAILABLE = True
 except ImportError:
     SBERT_AVAILABLE = False
+
+# Try to import Word2Vec utilities
+try:
+    from functions.nlp_models import load_trained_word2vec_model
+    W2V_LOADER_AVAILABLE = True
+except ImportError:
+    W2V_LOADER_AVAILABLE = False
 
 # Helper functions
 def simple_tokenize(text):
@@ -114,14 +123,296 @@ if 'cleaned_jobs_df' not in st.session_state:
 if 'w2v_model' not in st.session_state:
     st.session_state.w2v_model = None
 
+if 'sbert_model' not in st.session_state:
+    st.session_state.sbert_model = None
+
+if 'auto_load_attempted' not in st.session_state:
+    st.session_state.auto_load_attempted = False
+
+if 'precomputed_w2v_embeddings' not in st.session_state:
+    st.session_state.precomputed_w2v_embeddings = None
+
+if 'precomputed_sbert_embeddings' not in st.session_state:
+    st.session_state.precomputed_sbert_embeddings = None
+
+# Functions to find and load pre-computed embeddings
+def find_precomputed_embeddings():
+    """Find available pre-computed embeddings in models directory"""
+    workspace_path = st.session_state.get('workspace_path')
+    if not workspace_path:
+        return None, None
+    
+    models_dir = os.path.join(workspace_path, "models")
+    if not os.path.exists(models_dir):
+        return None, None
+    
+    w2v_embeddings = None
+    sbert_embeddings = None
+    w2v_metadata = None
+    sbert_metadata = None
+    
+    try:
+        import joblib
+        all_files = os.listdir(models_dir)
+        
+        # Find Word2Vec embeddings - look for job_embeddings_w2v_*.npy
+        w2v_files = [f for f in all_files if f.startswith('job_embeddings_w2v_') and f.endswith('.npy')]
+        if w2v_files:
+            # Get the most recent one (largest number of jobs)
+            try:
+                w2v_files_sorted = sorted(w2v_files, key=lambda x: int(x.split('_')[3].replace('jobs.npy', '')) if len(x.split('_')) > 3 else 0, reverse=True)
+            except (ValueError, IndexError):
+                # Fallback: just use the first file if sorting fails
+                w2v_files_sorted = w2v_files
+            
+            w2v_file = w2v_files_sorted[0]
+            w2v_path = os.path.join(models_dir, w2v_file)
+            
+            # Directly load the embeddings file
+            try:
+                w2v_embeddings = np.load(w2v_path, allow_pickle=False)
+                # Verify it's a valid numpy array
+                if not isinstance(w2v_embeddings, np.ndarray):
+                    w2v_embeddings = None
+            except Exception as e:
+                # Show error in console for debugging
+                print(f"Error loading Word2Vec embeddings from {w2v_path}: {e}")
+                import traceback
+                traceback.print_exc()
+                w2v_embeddings = None
+
+        
+        # Find SBERT embeddings
+        sbert_files = [f for f in all_files if f.startswith('job_embeddings_sbert_') and f.endswith('.npy')]
+        if sbert_files:
+            # Get the most recent one (largest number of jobs)
+            try:
+                sbert_files_sorted = sorted(sbert_files, key=lambda x: int(x.split('_')[3].replace('jobs.npy', '')) if len(x.split('_')) > 3 else 0, reverse=True)
+            except (ValueError, IndexError):
+                # Fallback: just use the first file if sorting fails
+                sbert_files_sorted = sbert_files
+            
+            sbert_file = sbert_files_sorted[0]
+            sbert_path = os.path.join(models_dir, sbert_file)
+            
+            try:
+                sbert_embeddings = np.load(sbert_path)
+            except Exception as e:
+                # Log error but continue
+                print(f"Error loading SBERT embeddings from {sbert_path}: {e}")
+            
+            # Try to load metadata
+            if sbert_embeddings is not None:
+                metadata_file = sbert_file.replace('.npy', '_metadata.joblib')
+                metadata_path = os.path.join(models_dir, metadata_file)
+                if os.path.exists(metadata_path):
+                    try:
+                        sbert_metadata = joblib.load(metadata_path)
+                    except Exception:
+                        pass
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error in find_precomputed_embeddings: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    return (w2v_embeddings, w2v_metadata), (sbert_embeddings, sbert_metadata)
+
+# Auto-load functions
+def auto_load_word2vec_model(use_pretrained=False):
+    """Automatically load Word2Vec model if available"""
+    if st.session_state.w2v_model is not None:
+        return True  # Already loaded
+    
+    if not W2V_LOADER_AVAILABLE:
+        return False
+    
+    try:
+        w2v_model = load_trained_word2vec_model(use_pretrained=use_pretrained)
+        if w2v_model is not None:
+            st.session_state.w2v_model = w2v_model
+            return True
+        return False
+    except Exception:
+        return False
+
+def auto_load_sbert_model():
+    """Automatically load SBERT model if available"""
+    if st.session_state.sbert_model is not None:
+        return True  # Already loaded
+    
+    if not SBERT_AVAILABLE:
+        return False
+    
+    try:
+        sbert_model = load_sbert_model()
+        if sbert_model is not None:
+            st.session_state.sbert_model = sbert_model
+            return True
+        return False
+    except Exception:
+        return False
+
+# Direct load of pre-computed embeddings if not already loaded
+workspace_path = st.session_state.get('workspace_path')
+if workspace_path:
+    models_dir = os.path.join(workspace_path, "models")
+    if os.path.exists(models_dir):
+        try:
+            all_files = os.listdir(models_dir)
+            
+            # Load Word2Vec embeddings
+            if st.session_state.get('precomputed_w2v_embeddings') is None:
+                w2v_files = [f for f in all_files if f.startswith('job_embeddings_w2v_') and f.endswith('.npy')]
+                if w2v_files:
+                    try:
+                        w2v_files_sorted = sorted(w2v_files, key=lambda x: int(x.split('_')[3].replace('jobs.npy', '')) if len(x.split('_')) > 3 else 0, reverse=True)
+                    except (ValueError, IndexError):
+                        w2v_files_sorted = w2v_files
+                    
+                    w2v_file = w2v_files_sorted[0]
+                    w2v_path = os.path.join(models_dir, w2v_file)
+                    embeddings = np.load(w2v_path, allow_pickle=False)
+                    if isinstance(embeddings, np.ndarray) and embeddings.size > 0:
+                        st.session_state.precomputed_w2v_embeddings = embeddings
+            
+            # Load SBERT embeddings
+            if st.session_state.get('precomputed_sbert_embeddings') is None:
+                sbert_files = [f for f in all_files if f.startswith('job_embeddings_sbert_') and f.endswith('.npy')]
+                if sbert_files:
+                    try:
+                        sbert_files_sorted = sorted(sbert_files, key=lambda x: int(x.split('_')[3].replace('jobs.npy', '')) if len(x.split('_')) > 3 else 0, reverse=True)
+                    except (ValueError, IndexError):
+                        sbert_files_sorted = sbert_files
+                    
+                    sbert_file = sbert_files_sorted[0]
+                    sbert_path = os.path.join(models_dir, sbert_file)
+                    embeddings = np.load(sbert_path, allow_pickle=False)
+                    if isinstance(embeddings, np.ndarray) and embeddings.size > 0:
+                        st.session_state.precomputed_sbert_embeddings = embeddings
+        except Exception as e:
+            # Store error for debugging
+            st.session_state.embedding_load_error = str(e)
+
+# Auto-load models and pre-computed embeddings on first page load
+if not st.session_state.auto_load_attempted:
+    with st.spinner("🔄 Auto-loading models and checking for pre-computed embeddings..."):
+        w2v_loaded = auto_load_word2vec_model()
+        sbert_loaded = auto_load_sbert_model()
+        
+        # Check for pre-computed embeddings
+        workspace_path = st.session_state.get('workspace_path')
+        models_dir = os.path.join(workspace_path, "models") if workspace_path else None
+        
+        # Debug: Show what we're looking for
+        if models_dir and os.path.exists(models_dir):
+            all_files = os.listdir(models_dir)
+            w2v_embedding_files = [f for f in all_files if f.startswith('job_embeddings_w2v_') and f.endswith('.npy')]
+            if w2v_embedding_files:
+                st.session_state.debug_w2v_files_found = w2v_embedding_files
+        
+        (w2v_emb, w2v_meta), (sbert_emb, sbert_meta) = find_precomputed_embeddings()
+        
+        # Store embeddings in session state
+        if w2v_emb is not None:
+            st.session_state.precomputed_w2v_embeddings = w2v_emb
+            st.session_state.precomputed_w2v_metadata = w2v_meta
+        if sbert_emb is not None:
+            st.session_state.precomputed_sbert_embeddings = sbert_emb
+            st.session_state.precomputed_sbert_metadata = sbert_meta
+        
+        st.session_state.auto_load_attempted = True
+        
+        # Show auto-load results
+        results = []
+        warnings = []
+        
+        if w2v_loaded:
+            results.append("✅ Word2Vec model")
+        else:
+            # Check if models directory exists and has files
+            workspace_path = st.session_state.get('workspace_path')
+            if workspace_path:
+                models_dir = os.path.join(workspace_path, "models")
+                if os.path.exists(models_dir):
+                    all_files = os.listdir(models_dir)
+                    joblib_files = [f for f in all_files if f.endswith('.joblib')]
+                    if joblib_files:
+                        w2v_files = [f for f in joblib_files if 'word2vec' in f.lower() or 'w2v' in f.lower()]
+                        if not w2v_files:
+                            w2v_files = joblib_files
+                        if w2v_files:
+                            warnings.append(f"⚠️ Found model file(s) but couldn't auto-load. Try manual load below.")
+                    else:
+                        warnings.append(f"ℹ️ No Word2Vec model found in {models_dir}. Train one in NLP Analytics page.")
+                else:
+                    warnings.append(f"ℹ️ Models directory not found. Train a Word2Vec model in NLP Analytics page first.")
+            else:
+                warnings.append(f"ℹ️ Workspace path not set. Train a Word2Vec model in NLP Analytics page first.")
+        
+        if sbert_loaded:
+            results.append("✅ SBERT model")
+        
+        if w2v_emb is not None:
+            num_jobs = w2v_emb.shape[0] if hasattr(w2v_emb, 'shape') else 'unknown'
+            results.append(f"✅ Pre-computed Word2Vec embeddings ({num_jobs} jobs)")
+        elif st.session_state.auto_load_attempted:
+            # Check if embedding files exist but couldn't be loaded
+            workspace_path = st.session_state.get('workspace_path')
+            if workspace_path:
+                models_dir = os.path.join(workspace_path, "models")
+                if os.path.exists(models_dir):
+                    all_files = os.listdir(models_dir)
+                    w2v_embedding_files = [f for f in all_files if f.startswith('job_embeddings_w2v_') and f.endswith('.npy')]
+                    if w2v_embedding_files:
+                        warnings.append(f"⚠️ Found Word2Vec embedding file(s): {', '.join(w2v_embedding_files)} but couldn't load them. Check file permissions or file format.")
+        
+        if sbert_emb is not None:
+            num_jobs = sbert_emb.shape[0] if hasattr(sbert_emb, 'shape') else 'unknown'
+            results.append(f"✅ Pre-computed SBERT embeddings ({num_jobs} jobs)")
+        
+        if results:
+            st.success(f"Auto-loaded: {', '.join(results)}")
+        if warnings:
+            for warning in warnings:
+                st.info(warning)
+        
+        # Debug info: Show what was checked
+        with st.expander("🔍 Debug: Auto-load Details", expanded=False):
+            workspace_path = st.session_state.get('workspace_path')
+            st.write(f"**Workspace Path**: {workspace_path if workspace_path else 'Not set'}")
+            if workspace_path:
+                models_dir = os.path.join(workspace_path, "models")
+                st.write(f"**Models Directory**: {models_dir}")
+                st.write(f"**Directory Exists**: {os.path.exists(models_dir) if models_dir else False}")
+                if os.path.exists(models_dir):
+                    all_files = os.listdir(models_dir)
+                    w2v_embedding_files = [f for f in all_files if f.startswith('job_embeddings_w2v_') and f.endswith('.npy')]
+                    sbert_embedding_files = [f for f in all_files if f.startswith('job_embeddings_sbert_') and f.endswith('.npy')]
+                    st.write(f"**Word2Vec embedding files found**: {w2v_embedding_files if w2v_embedding_files else 'None'}")
+                    st.write(f"**SBERT embedding files found**: {sbert_embedding_files if sbert_embedding_files else 'None'}")
+                    st.write(f"**Word2Vec embeddings loaded**: {w2v_emb is not None}")
+                    st.write(f"**SBERT embeddings loaded**: {sbert_emb is not None}")
+                    if w2v_emb is not None:
+                        st.write(f"**Word2Vec embeddings shape**: {w2v_emb.shape if hasattr(w2v_emb, 'shape') else 'N/A'}")
+                    if sbert_emb is not None:
+                        st.write(f"**SBERT embeddings shape**: {sbert_emb.shape if hasattr(sbert_emb, 'shape') else 'N/A'}")
+        
+        # Only rerun if we actually loaded something
+        if w2v_loaded or sbert_loaded or w2v_emb is not None or sbert_emb is not None:
+            st.rerun()
+
 # Main content
 st.markdown("""
 ### Overview
 Import computed embeddings to PostgreSQL database with pgvector extension:
-- Computes **Word2Vec** embeddings for all jobs
-- Computes **SBERT** embeddings for all jobs (if available)
+- **Word2Vec embeddings**  - Word2Vec model 
+- **SBERT embeddings**  - SBERT model 
+- **Pre-computed embeddings** - Automatically detects and uses pre-computed embeddings from `workspace/models/` if available (much faster!)
 - Stores embeddings in `embedding` (SBERT, 384 dimensions) and `word2vec_embedding` (Word2Vec, 300 dimensions)
 - Enables fast vector similarity search using pgvector indexes
+
+**Note**: You only need Word2Vec to import embeddings. SBERT is optional and will be added automatically if available. Pre-computed embeddings (e.g., `job_embeddings_w2v_*.npy`, `job_embeddings_sbert_*.npy`) will be automatically detected and used if the number of jobs matches.
 """)
 
 # Check database availability
@@ -146,7 +437,7 @@ if not DB_AVAILABLE:
 
 # Database Setup Section
 st.markdown("---")
-st.markdown("### 🗄️ Database Setup")
+st.markdown("### Database Setup")
 
 col_setup, col_backup, col_reset = st.columns(3)
 
@@ -182,107 +473,32 @@ with col_reset:
             else:
                 st.error("❌ Failed to reset jobs table. Check database connection and permissions.")
 
-# Load Job Data Section
-st.markdown("---")
-st.markdown("### 📁 Load Job Data")
-
-if st.session_state.cleaned_jobs_df is None:
-    if st.button("Load Job Data", key="db_import_load_jobs", type="primary"):
-        with st.spinner("Loading job data..."):
-            df = load_job_data()
-            if df is not None:
-                st.session_state.cleaned_jobs_df = df
-                st.success(f"✅ Loaded {len(df):,} job postings")
-                st.rerun()
-            else:
-                st.error("❌ Could not load data. Please check that job data files exist in the workspace.")
-else:
-    df = st.session_state.cleaned_jobs_df
-    st.success(f"✅ Working with {len(df):,} job postings")
-    
-    # Show data preview
-    with st.expander("📋 Preview Job Data"):
-        st.dataframe(df.head(10))
-        st.write(f"**Columns**: {', '.join(df.columns.tolist())}")
-
-# Word2Vec Model Section
-st.markdown("---")
-st.markdown("### 🤖 Word2Vec Model")
-
-if st.session_state.w2v_model is None:
-    st.warning("⚠️ Word2Vec model not loaded.")
-    
-    # Option to load from file
-    st.markdown("#### Load Word2Vec Model")
-    
-    workspace_path = st.session_state.get('workspace_path')
-    if workspace_path:
-        models_dir = os.path.join(workspace_path, "models")
-        if os.path.exists(models_dir):
-            w2v_files = [f for f in os.listdir(models_dir) if f == 'word2vec_model.joblib']
-            if w2v_files:
-                if st.button("Load Saved Word2Vec Model", key="load_w2v_model"):
-                    try:
-                        import joblib
-                        model_path = os.path.join(models_dir, w2v_files[0])
-                        saved_data = joblib.load(model_path)
-                        st.session_state.w2v_model = saved_data['model']
-                        st.success("✅ Word2Vec model loaded!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Failed to load model: {e}")
-            else:
-                st.info("No saved Word2Vec model found. Please train a model in the NLP Analytics page first.")
-        else:
-            st.info("Models directory not found. Please train a Word2Vec model in the NLP Analytics page first.")
-    else:
-        st.info("Workspace path not set. Please train a Word2Vec model in the NLP Analytics page first.")
-    
-    st.info("💡 **Tip**: Train or load a Word2Vec model in the **NLP Analytics** page (Word Embeddings tab) first, then return here to import embeddings.")
-else:
-    st.success("✅ Word2Vec model ready")
-    
-    # Show model info
-    model_vector_size = None
-    if hasattr(st.session_state.w2v_model, 'vector_size'):
-        model_vector_size = st.session_state.w2v_model.vector_size
-        st.info(f"**Model Vector Size**: {model_vector_size} dimensions")
-        
-        # Warn if dimension doesn't match database schema
-        if model_vector_size != 300:
-            st.warning(f"⚠️ **Dimension Mismatch**: Your model has {model_vector_size} dimensions, but the database expects 300 dimensions.")
-            st.info("💡 **Options**:")
-            st.write("1. Retrain the model with `vector_size=300` in the NLP Analytics page")
-            st.write("2. Or update the database schema to match your model's dimension")
-            st.write("   ```sql")
-            st.write(f"   ALTER TABLE jobs ALTER COLUMN word2vec_embedding TYPE vector({model_vector_size});")
-            st.write("   ```")
-    else:
-        st.warning("⚠️ Could not determine model vector size")
-    
-    if hasattr(st.session_state.w2v_model, 'wv') and hasattr(st.session_state.w2v_model.wv, 'key_to_index'):
-        st.info(f"**Vocabulary Size**: {len(st.session_state.w2v_model.wv.key_to_index):,} words")
-
 # Import Embeddings Section
 st.markdown("---")
-st.markdown("### 📤 Import Embeddings to Database")
+st.markdown("### Import Embeddings to Database")
+
+# Show requirements info
+precomputed_w2v_available = st.session_state.get('precomputed_w2v_embeddings') is not None
+precomputed_sbert_available = st.session_state.get('precomputed_sbert_embeddings') is not None
 
 if st.session_state.cleaned_jobs_df is None:
     st.warning("⚠️ Please load job data first.")
-elif st.session_state.w2v_model is None:
-    st.warning("⚠️ Please load or train a Word2Vec model first.")
+elif st.session_state.w2v_model is None and st.session_state.get('precomputed_w2v_embeddings') is None:
+    # Only show warning if auto-load was attempted (to avoid showing it during auto-load)
+    # Check if we have pre-computed embeddings as an alternative
+    if st.session_state.auto_load_attempted:
+        st.warning("⚠️ Word2Vec model not loaded and no pre-computed embeddings found. Please load a model manually below, train one in the NLP Analytics page, or ensure pre-computed embeddings are available.")
 else:
     df = st.session_state.cleaned_jobs_df
-    
-    # Import options
+        # Import options
     col1, col2 = st.columns(2)
     
     with col1:
         batch_size = st.number_input(
             "Batch Size for Import",
             min_value=10,
-            max_value=1000,
-            value=100,
+            max_value=10000,
+            value=1000,
             step=10,
             help="Number of jobs to process in each batch"
         )
@@ -296,11 +512,49 @@ else:
         text_column = st.selectbox(
             "Text Column",
             options=text_columns,
-            index=0 if 'job_text_cleaned' in text_columns else 0,
+            index=5 if 'job_text_cleaned' in text_columns else 0,
             help="Column to use for computing embeddings"
         )
     
-    if st.button("Import SBERT + Word2Vec Embeddings to Database", type="primary", key="import_w2v_to_db"):
+    # Check for pre-computed embeddings
+    precomputed_w2v = st.session_state.get('precomputed_w2v_embeddings')
+    precomputed_sbert = st.session_state.get('precomputed_sbert_embeddings')
+    
+    # Show pre-computed embeddings info if available
+    if precomputed_w2v is not None or precomputed_sbert is not None:
+        st.markdown("#### Pre-computed Embeddings Available")
+        col1, col2 = st.columns(2)
+        with col1:
+            if precomputed_w2v is not None:
+                w2v_shape = precomputed_w2v.shape if hasattr(precomputed_w2v, 'shape') else None
+                num_w2v = w2v_shape[0] if w2v_shape else 'unknown'
+                st.success(f"✅ Word2Vec embeddings: {num_w2v} jobs")
+            else:
+                st.info("ℹ️ No pre-computed Word2Vec embeddings")
+        with col2:
+            if precomputed_sbert is not None:
+                sbert_shape = precomputed_sbert.shape if hasattr(precomputed_sbert, 'shape') else None
+                num_sbert = sbert_shape[0] if sbert_shape else 'unknown'
+                st.success(f"✅ SBERT embeddings: {num_sbert} jobs")
+            else:
+                st.info("ℹ️ No pre-computed SBERT embeddings")
+        
+        use_precomputed = st.checkbox(
+            "Use pre-computed embeddings if available (faster)",
+            value=True,
+            help="If the number of jobs matches, use pre-computed embeddings instead of recomputing"
+        )
+    else:
+        use_precomputed = False
+    
+    # Button text based on SBERT availability
+    button_text = "Import Embeddings to Database"
+    if SBERT_AVAILABLE:
+        button_text = "Import Embeddings (Word2Vec + SBERT)"
+    else:
+        button_text = "Import Embeddings (Word2Vec only)"
+    
+    if st.button(button_text, type="primary", key="import_w2v_to_db"):
         # Get text column
         if text_column not in df.columns:
             st.error(f"Column '{text_column}' not found in dataframe. Available columns: {', '.join(df.columns)}")
@@ -315,11 +569,28 @@ else:
                 progress_bar = progress_container.progress(0)
                 status_text = progress_container.empty()
                 
-                # Compute Word2Vec embeddings
-                status_text.text(f"Computing Word2Vec embeddings for {num_jobs} jobs...")
-                progress_bar.progress(0.1)
+                # Use pre-computed Word2Vec embeddings if available and matching
+                w2v_embeddings = None
+                if use_precomputed and precomputed_w2v is not None:
+                    w2v_shape = precomputed_w2v.shape if hasattr(precomputed_w2v, 'shape') else None
+                    if w2v_shape and w2v_shape[0] == num_jobs:
+                        status_text.text(f"Using pre-computed Word2Vec embeddings for {num_jobs} jobs...")
+                        progress_bar.progress(0.1)
+                        w2v_embeddings = precomputed_w2v
+                        st.info("✅ Using pre-computed Word2Vec embeddings (no computation needed)")
+                    else:
+                        st.warning(f"⚠️ Pre-computed Word2Vec embeddings have {w2v_shape[0] if w2v_shape else 'unknown'} jobs, but you have {num_jobs} jobs. Will recompute.")
                 
-                w2v_embeddings = compute_job_embeddings_w2v(job_texts, st.session_state.w2v_model)
+                # Compute Word2Vec embeddings if not using pre-computed
+                if w2v_embeddings is None:
+                    # Check if we have a model to compute with
+                    if st.session_state.w2v_model is None:
+                        st.error("❌ Cannot compute Word2Vec embeddings: No model loaded and pre-computed embeddings don't match. Please load a Word2Vec model or ensure pre-computed embeddings match the number of jobs.")
+                        st.stop()
+                    
+                    status_text.text(f"Computing Word2Vec embeddings for {num_jobs} jobs...")
+                    progress_bar.progress(0.1)
+                    w2v_embeddings = compute_job_embeddings_w2v(job_texts, st.session_state.w2v_model)
                 
                 if w2v_embeddings is None or len(w2v_embeddings) == 0:
                     st.error("Failed to compute Word2Vec embeddings")
@@ -337,16 +608,36 @@ else:
                 # Optionally compute SBERT embeddings
                 sbert_embeddings = None
                 if SBERT_AVAILABLE:
-                    status_text.text(f"Computing SBERT embeddings for {num_jobs} jobs...")
-                    progress_bar.progress(0.2)
-                    try:
-                        sbert_model = load_sbert_model()
-                        if sbert_model:
-                            sbert_embeddings = compute_job_embeddings_sbert(job_texts, sbert_model)
+                    # Use pre-computed SBERT embeddings if available and matching (no model needed!)
+                    if use_precomputed and precomputed_sbert is not None:
+                        sbert_shape = precomputed_sbert.shape if hasattr(precomputed_sbert, 'shape') else None
+                        if sbert_shape and sbert_shape[0] == num_jobs:
+                            status_text.text(f"Using pre-computed SBERT embeddings for {num_jobs} jobs...")
+                            progress_bar.progress(0.2)
+                            sbert_embeddings = precomputed_sbert
+                            st.info("✅ Using pre-computed SBERT embeddings (no model or computation needed)")
                         else:
-                            st.warning("SBERT model could not be loaded; proceeding with Word2Vec only.")
-                    except Exception as e:
-                        st.warning(f"SBERT embedding computation failed: {e}. Proceeding with Word2Vec only.")
+                            st.warning(f"⚠️ Pre-computed SBERT embeddings have {sbert_shape[0] if sbert_shape else 'unknown'} jobs, but you have {num_jobs} jobs. Will recompute using model.")
+                    
+                    # Compute SBERT embeddings if not using pre-computed (model required)
+                    if sbert_embeddings is None:
+                        status_text.text(f"Computing SBERT embeddings for {num_jobs} jobs...")
+                        progress_bar.progress(0.2)
+                        try:
+                            # Use pre-loaded SBERT model from session state if available
+                            sbert_model = st.session_state.get('sbert_model')
+                            if sbert_model is None:
+                                # Fallback: try to load it now
+                                sbert_model = load_sbert_model()
+                                if sbert_model:
+                                    st.session_state.sbert_model = sbert_model
+                            
+                            if sbert_model:
+                                sbert_embeddings = compute_job_embeddings_sbert(job_texts, sbert_model)
+                            else:
+                                st.warning("SBERT model could not be loaded; proceeding with Word2Vec only.")
+                        except Exception as e:
+                            st.warning(f"SBERT embedding computation failed: {e}. Proceeding with Word2Vec only.")
                 else:
                     st.info("SBERT utilities not available. Only Word2Vec embeddings will be imported.")
 
@@ -413,7 +704,13 @@ else:
                 progress_bar.progress(1.0)
                 status_text.text(f"✅ Successfully imported {success_count}/{len(batch_data)} jobs with embeddings!")
                 
-                st.success(f"✅ Import complete! {success_count} jobs with Word2Vec/SBERT embeddings are now in the database.")
+                # Determine what was imported
+                if sbert_embeddings is not None and len(sbert_embeddings) > 0:
+                    embeddings_info = "Word2Vec + SBERT"
+                else:
+                    embeddings_info = "Word2Vec"
+                
+                st.success(f"✅ Import complete! {success_count} jobs with {embeddings_info} embeddings are now in the database.")
                 
                 # Show summary
                 with st.expander("📊 Import Summary", expanded=True):
@@ -429,23 +726,13 @@ else:
                             st.caption(f"⚠️ Expected 300, got {w2v_dim_display}")
                     
                     st.markdown("**Details:**")
-                    st.write(f"- **Database columns**: `embedding` (SBERT, if available), `word2vec_embedding`")
+                    if sbert_embeddings is not None and len(sbert_embeddings) > 0:
+                        st.write(f"- **Embeddings imported**: Word2Vec (300-dim) + SBERT (384-dim)")
+                        st.write(f"- **Database columns**: `embedding` (SBERT), `word2vec_embedding` (Word2Vec)")
+                    else:
+                        st.write(f"- **Embeddings imported**: Word2Vec (300-dim) only")
+                        st.write(f"- **Database columns**: `word2vec_embedding` (Word2Vec)")
                     st.write(f"- **Vector search**: Enabled with pgvector index")
                     st.write(f"- **Batch size used**: {batch_size}")
                     st.write(f"- **Text column**: `{text_column}`")
 
-# Footer
-st.markdown("---")
-st.markdown("""
-### 📚 Notes
-
-- **Word2Vec Model**: Train or load a Word2Vec model in the **NLP Analytics** page (Word Embeddings tab) before importing
-- **SBERT Model**: Install `sentence-transformers` and configure SBERT in the environment to store SBERT embeddings
-- **Database**: Ensure PostgreSQL with pgvector extension is running and configured
-- **Embeddings**: SBERT embeddings are 384‑dim, Word2Vec embeddings are 300‑dim for vector similarity search
-- **Performance**: Large datasets are processed in batches for optimal performance
-
-**Related Pages:**
-- **NLP Analytics**: Train Word2Vec models and compute embeddings
-- **Resume Matching**: Use imported embeddings for job matching
-""")

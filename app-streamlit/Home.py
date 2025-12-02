@@ -8,14 +8,14 @@ import base64
 from utils import initialize_workspace
 from functions.database import SELECTED_COLUMNS
 from functions import database as db
+from components.header import render_header
 
 # Initialize workspace path and imports
 initialize_workspace()
 
 st.set_page_config(
     layout="wide",
-    page_title="LinkedIn Job Analysis Platform",
-    page_icon="💼",
+    page_title="Job Intelligence Platform",
     initial_sidebar_state="expanded"
 )
 
@@ -28,7 +28,6 @@ try:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 except Exception:
     pass
-
 
 # CSS is loaded from styles/app.css
 
@@ -100,11 +99,9 @@ hero_html = f"""
     <div class="hero-bg-pattern"></div>
     <div class="hero-content">
         <div>
-            <span class="hero-badge">Enterprise Edition v1.0</span>
-            <h1 class="hero-title">LinkedIn Job Intelligence Platform</h1>
+            <h1 class="hero-title">AI-Powered Job Intelligence</h1>
             <p class="hero-description">
-                Advanced NLP-powered job market analysis using Named Entity Recognition, Topic Modeling, and Word Embeddings.
-                Extract insights from job postings and match resumes with opportunities using state-of-the-art language models.
+                Transform how you analyze job markets and match candidates. Our advanced AI platform uses cutting-edge natural language processing to uncover insights from millions of job postings.
             </p>
         </div>
         <div class="metrics-grid" style="display: flex; flex-direction: column; gap: 1rem; align-items: stretch;">
@@ -118,27 +115,24 @@ st.markdown(hero_html, unsafe_allow_html=True)
 
 navigation_cards = [
     {
-        "icon": "📊",
-        "title": "Exploratory Data Analysis",
-        "description": "Explore job posting distributions, company insights, salary trends, and skills demand across different roles and industries.",
-        "button": "Launch EDA Workspace",
-        "page": "pages/1_EDA_Updated.py",
+        "title": "Data Analysis",
+        "description": "Visualize job market trends, company insights, and skill demand patterns across industries.",
+        "button": "Explore Data",
+        "page": "pages/1_EDA.py",
         "key": "nav_eda_btn",
     },
     {
-        "icon": "🤖",
-        "title": "NLP Analytics",
-        "description": "Analyze job descriptions with Named Entity Recognition, Topic Modeling, and Word Embeddings for skill extraction and job matching.",
-        "button": "Open NLP Analytics",
-        "page": "pages/2_NLP_Analytics.py",
+        "title": "AI Analytics",
+        "description": "Extract skills, topics, and insights from job descriptions using advanced machine learning.",
+        "button": "Run Analytics",
+        "page": "pages/3_NLP_Analytics.py",
         "key": "nav_analytics_btn",
     },
     {
-        "icon": "📄",
         "title": "Resume Matching",
-        "description": "Upload your resume and find the most relevant job opportunities using AI-powered semantic similarity matching.",
-        "button": "Find Job Matches",
-        "page": "pages/4_Resume_Matching.py",
+        "description": "Find your perfect job matches using AI-powered resume analysis and job compatibility scoring.",
+        "button": "Match Resume",
+        "page": "pages/7_Resume_Matching.py",
         "key": "nav_resume_btn",
     },
 ]

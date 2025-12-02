@@ -197,8 +197,20 @@ def simple_tokenize(text):
 
 # SBERT functions
 @st.cache_resource
-def load_sbert_model():
-    """Load SBERT model"""
+def load_sbert_model(model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+    """
+    Load pre-trained SBERT model from HuggingFace
+    
+    Args:
+        model_name: Name of the pre-trained SBERT model to load. 
+                   Default: "sentence-transformers/all-MiniLM-L6-v2" (384 dimensions)
+                   Other options: 
+                   - "sentence-transformers/all-mpnet-base-v2" (768 dimensions)
+                   - "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2" (384 dimensions, multilingual)
+    
+    Returns:
+        SentenceTransformer model or None if loading fails
+    """
     if not SENTENCE_TRANSFORMERS_AVAILABLE:
         return None
 
@@ -207,29 +219,31 @@ def load_sbert_model():
     
     if torch.cuda.is_available():
         device = "cuda"
-        print("Using CUDA GPU for SBERT")
+        print(f"Using CUDA GPU for SBERT model: {model_name}")
     elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
         # Test MPS with a small tensor to ensure it works
         try:
             test_device = torch.device('mps')
             test_tensor = torch.randn(1).to(test_device)
             device = "mps"
-            print("Using Apple MPS (Metal) for SBERT")
+            print(f"Using Apple MPS (Metal) for SBERT model: {model_name}")
         except Exception as e:
             print(f"MPS test failed ({e}), falling back to CPU")
             device = "cpu"
     else:
         device = "cpu"
-        print("Using CPU for SBERT")
+        print(f"Using CPU for SBERT model: {model_name}")
 
     try:
-        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device=device)
+        model = SentenceTransformer(model_name, device=device)
+        print(f"✅ Successfully loaded pre-trained SBERT model: {model_name}")
         return model
     except Exception as e:
-        print(f"Failed to load model on {device}: {e}")
+        print(f"Failed to load model {model_name} on {device}: {e}")
         # Fallback to CPU
         try:
-            model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cpu")
+            model = SentenceTransformer(model_name, device="cpu")
+            print(f"✅ Successfully loaded pre-trained SBERT model on CPU: {model_name}")
             return model
         except Exception as e2:
             print(f"Failed to load model on CPU: {e2}")
@@ -341,7 +355,7 @@ def train_word2vec_model(job_texts, resume_texts, save_model=True):
     # Train model
     model = Word2Vec(
         sentences=training_corpus,
-        vector_size=1536,  # Updated to 1536 dimensions for database compatibility
+        vector_size=300,  # Standard Word2Vec dimension (300)
         window=5,
         min_count=10,
         workers=4,
@@ -354,7 +368,7 @@ def train_word2vec_model(job_texts, resume_texts, save_model=True):
         model_data = {
             'model': model,
             'trained_at': datetime.now().isoformat(),
-            'vector_size': 1536,  # Updated to match training configuration
+            'vector_size': 300,  # Standard Word2Vec dimension (300)
             'window': 5,
             'min_count': 10,
             'sg': 1,
@@ -368,13 +382,13 @@ def train_word2vec_model(job_texts, resume_texts, save_model=True):
 def get_doc_embedding_w2v(tokens, model):
     """Get document embedding using Word2Vec"""
     if not GENSIM_AVAILABLE or model is None:
-        # Get vector size from model if available, otherwise default to 1536
-        vector_size = getattr(model, 'vector_size', 1536) if model else 1536
+        # Get vector size from model if available, otherwise default to 300
+        vector_size = getattr(model, 'vector_size', 300) if model else 300
         return np.zeros(vector_size, dtype="float32")
 
     vectors = [model.wv[word] for word in tokens if word in model.wv]
     if not vectors:
-        vector_size = getattr(model, 'vector_size', 1536)
+        vector_size = getattr(model, 'vector_size', 300)
         return np.zeros(vector_size, dtype="float32")
     return np.mean(vectors, axis=0)
 
@@ -464,9 +478,19 @@ def find_similar_jobs_local(query_embedding: np.ndarray, job_embeddings: np.ndar
 
 # Functions for loading and using trained models
 @st.cache_resource
-def load_trained_word2vec_model():
-    """Load trained Word2Vec model from disk"""
-    if not JOBLIB_AVAILABLE:
+def load_trained_word2vec_model(use_pretrained: bool = False, pretrained_path: str = None):
+    """
+    Load Word2Vec model - either a locally trained model or a pre-trained model
+    
+    Args:
+        use_pretrained: If True, try to load a pre-trained Word2Vec model (e.g., Google's Word2Vec)
+        pretrained_path: Path to pre-trained Word2Vec model file (e.g., GoogleNews-vectors-negative300.bin)
+                       If None and use_pretrained=True, will look in models directory
+    
+    Returns:
+        Word2Vec model or None if loading fails
+    """
+    if not GENSIM_AVAILABLE:
         return None
 
     workspace_path = st.session_state.get('workspace_path')
@@ -475,14 +499,109 @@ def load_trained_word2vec_model():
     else:
         models_dir = "models"
 
-    model_path = os.path.join(models_dir, "word2vec_model.joblib")
+    # Try to load pre-trained model first if requested
+    if use_pretrained:
+        # Common pre-trained model filenames
+        pretrained_filenames = [
+            "GoogleNews-vectors-negative300.bin",
+            "GoogleNews-vectors-negative300.bin.gz",
+            "word2vec-google-news-300.bin",
+            "word2vec-google-news-300.bin.gz"
+        ]
+        
+        # If specific path provided, use it
+        if pretrained_path:
+            pretrained_candidates = [pretrained_path]
+        else:
+            # Look for pre-trained models in models directory
+            pretrained_candidates = [os.path.join(models_dir, fname) for fname in pretrained_filenames]
+            # Also check current directory
+            pretrained_candidates.extend([fname for fname in pretrained_filenames if os.path.exists(fname)])
+        
+        for pretrained_path_candidate in pretrained_candidates:
+            if os.path.exists(pretrained_path_candidate):
+                try:
+                    print(f"Loading pre-trained Word2Vec model from {pretrained_path_candidate}...")
+                    # Load pre-trained Word2Vec model (binary format)
+                    model = Word2Vec.load_word2vec_format(pretrained_path_candidate, binary=True)
+                    print(f"✅ Successfully loaded pre-trained Word2Vec model from {pretrained_path_candidate}")
+                    print(f"   Vocabulary size: {len(model.wv.key_to_index):,} words")
+                    print(f"   Vector size: {model.vector_size} dimensions")
+                    return model
+                except Exception as e:
+                    print(f"Error loading pre-trained model from {pretrained_path_candidate}: {e}")
+                    # Try as text format if binary fails
+                    try:
+                        model = Word2Vec.load_word2vec_format(pretrained_path_candidate, binary=False)
+                        print(f"✅ Successfully loaded pre-trained Word2Vec model (text format) from {pretrained_path_candidate}")
+                        print(f"   Vocabulary size: {len(model.wv.key_to_index):,} words")
+                        print(f"   Vector size: {model.vector_size} dimensions")
+                        return model
+                    except Exception as e2:
+                        print(f"Error loading as text format: {e2}")
+                        continue
+        
+        if use_pretrained:
+            print("⚠️ Pre-trained Word2Vec model not found. Falling back to locally trained model.")
+            print("💡 To use a pre-trained model, download Google's Word2Vec model:")
+            print("   wget https://drive.google.com/uc?id=0B7XkCwpI5KDYNlNUTTlS21aQlE&export=download")
+            print("   Or visit: https://code.google.com/archive/p/word2vec/")
+            print("   Save it in the models directory as 'GoogleNews-vectors-negative300.bin'")
+
+    # Try to load locally trained model
+    if not JOBLIB_AVAILABLE:
+        return None
+
+    # Try word2vec_model.joblib first (standard filename)
+    model_path = os.path.join(models_dir, "job_embeddings_w2v_14760_jobs.joblib")
+    
+    if not os.path.exists(model_path):
+        # Fallback to word2vec_model.joblib
+        model_path = os.path.join(models_dir, "word2vec_model.joblib")
+    
+    if not os.path.exists(model_path):
+        # Try w2v_model.joblib
+        model_path = os.path.join(models_dir, "w2v_model.joblib")
 
     if os.path.exists(model_path):
         try:
             model_data = joblib.load(model_path)
-            return model_data['model']
+            # Handle different save formats
+            if isinstance(model_data, dict):
+                if 'model' in model_data:
+                    model = model_data['model']
+                else:
+                    # Try to find Word2Vec model in dict
+                    for key, value in model_data.items():
+                        if value is not None and (hasattr(value, 'wv') or hasattr(value, 'vector_size')):
+                            model = value
+                            break
+                    else:
+                        print(f"Error: No Word2Vec model found in saved data. Keys: {list(model_data.keys())}")
+                        return None
+            else:
+                # Assume the saved data is the model itself
+                if model_data is not None and (hasattr(model_data, 'wv') or hasattr(model_data, 'vector_size')):
+                    model = model_data
+                else:
+                    print(f"Error: Loaded data does not appear to be a Word2Vec model")
+                    return None
+            
+            # Validate model has required attributes
+            if not (hasattr(model, 'wv') or hasattr(model, 'vector_size')):
+                print(f"Error: Model doesn't have required attributes")
+                return None
+            
+            print(f"✅ Word2Vec model loaded from {model_path}")
+            if hasattr(model, 'vector_size'):
+                print(f"   Vector size: {model.vector_size} dimensions")
+            if hasattr(model, 'wv') and hasattr(model.wv, 'key_to_index'):
+                print(f"   Vocabulary size: {len(model.wv.key_to_index):,} words")
+            return model
         except Exception as e:
             print(f"Error loading Word2Vec model: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     else:
         print(f"Word2Vec model not found at {model_path}")

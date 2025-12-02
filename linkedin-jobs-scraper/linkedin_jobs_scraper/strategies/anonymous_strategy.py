@@ -242,6 +242,15 @@ class AnonymousStrategy(Strategy):
         while processed < query.options.limit:
             AnonymousStrategy.__accept_cookies(driver, tag)
 
+            # Wait for jobs to be present
+            try:
+                WebDriverWait(driver, 10).until(
+                    ec.presence_of_element_located((By.CSS_SELECTOR, selectors.jobs))
+                )
+            except:
+                info(tag, 'Jobs list not found, skip')
+                break
+
             jobs_tot = driver.execute_script('return document.querySelectorAll(arguments[0]).length;', selectors.jobs)
 
             if jobs_tot == 0:
@@ -264,14 +273,28 @@ class AnonymousStrategy(Strategy):
                     selectors.dates])
 
                 try:
-                    job_id, job_link, job_title, job_company, job_place, job_date = driver.execute_script(
+                    result = driver.execute_script(
                         '''
                             const index = arguments[0];
-                            const job = document.querySelectorAll(arguments[1])[index];
+                            const jobs = document.querySelectorAll(arguments[1]);
+                            
+                            // Check if job exists
+                            if (!jobs || index >= jobs.length) {
+                                return null;
+                            }
+                            
+                            const job = jobs[index];
+                            if (!job) {
+                                return null;
+                            }
+                            
                             const link = job.querySelector(arguments[2]);
+                            if (!link) {
+                                return null;
+                            }
                             
                             // Click job link and scroll
-                            link.scrollIntoView();
+                            link.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             link.click();
                             const linkUrl = link.getAttribute("href");
                             
@@ -283,17 +306,28 @@ class AnonymousStrategy(Strategy):
                             
                             // Second set of selectors
                             if (!jobId) {
-                                jobId = job.querySelector(arguments[2])
-                                    .parentElement.getAttribute('data-entity-urn').split(':').splice(-1)[0];
+                                const linkElement = job.querySelector(arguments[2]);
+                                if (linkElement && linkElement.parentElement) {
+                                    const dataUrn = linkElement.parentElement.getAttribute('data-entity-urn');
+                                    if (dataUrn) {
+                                        jobId = dataUrn.split(':').splice(-1)[0];
+                                    }
+                                }
                             }
-                                                                                
+                            
+                            // Extract other fields with null checks
+                            const titleElement = job.querySelector(arguments[2]);
+                            const companyElement = job.querySelector(arguments[3]);
+                            const placeElement = job.querySelector(arguments[4]);
+                            const dateElement = job.querySelector(arguments[5]);
+                            
                             return [
-                                jobId,
-                                linkUrl,
-                                job.querySelector(arguments[2]).innerText,
-                                job.querySelector(arguments[3]).innerText,
-                                job.querySelector(arguments[4]).innerText,
-                                job.querySelector(arguments[5]).getAttribute('datetime')
+                                jobId || '',
+                                linkUrl || '',
+                                titleElement ? titleElement.innerText : '',
+                                companyElement ? companyElement.innerText : '',
+                                placeElement ? placeElement.innerText : '',
+                                dateElement ? dateElement.getAttribute('datetime') : ''
                             ];
                         ''',
                         job_index,
@@ -302,6 +336,17 @@ class AnonymousStrategy(Strategy):
                         selectors.companies,
                         selectors.places,
                         selectors.dates)
+                    
+                    # Check if result is null (job not found)
+                    if result is None:
+                        error(tag, f'Job at index {job_index} not found, skipping')
+                        job_index += 1
+                        continue
+                    
+                    job_id, job_link, job_title, job_company, job_place, job_date = result
+
+                    # Give the page time to load the details panel after clicking
+                    sleep(0.5)
 
                     # Wait for job details to load
                     debug(tag, f'Loading details of job {job_id}')

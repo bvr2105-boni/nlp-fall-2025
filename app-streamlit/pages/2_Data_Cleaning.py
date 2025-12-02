@@ -8,6 +8,7 @@ import unicodedata
 import re
 from datetime import datetime
 
+from components.header import render_header
 from utils import initialize_workspace
 
 # Initialize workspace path and imports
