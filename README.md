@@ -27,24 +27,64 @@ This project is an NLP-powered platform for analyzing LinkedIn job postings usin
 
 ```
 nlp-fall-2025/
-├── app-streamlit/          # Streamlit web application
-│   ├── Home.py            # Main dashboard
-│   ├── pages/
-│   │   ├── 1_EDA.py       # Exploratory data analysis
-│   │   ├── 2_NLP_Analytics.py  # NLP analysis tools
-│   │   └── 3_Meet_Our_Team.py
-│   ├── functions/         # Helper functions
-│   │   ├── nlp_database.py      # Data loading utilities
-│   │   └── nlp_components.py    # Visualization components
-│   └── requirements-nlp.txt     # Python dependencies
-├── workspace/             # Analysis notebooks and data
-│   ├── Data/             # Job datasets
-│   ├── NER/              # Named Entity Recognition
-│   ├── Topic Modeling/   # LDA and LSA implementations
-│   ├── Word Embedding/   # Word2Vec and SBERT
-│   └── Resume_testing/   # Resume matching experiments
-├── scraps/               # Raw scraped data (CSV files)
-└── linkedin.py           # LinkedIn scraper script
+├── app-streamlit/                    # Streamlit web application
+│   ├── Home.py                       # Main dashboard
+│   ├── pages/                        # Application pages
+│   │   ├── 0_Job_Crawling.py         # LinkedIn job scraper interface
+│   │   ├── 1_EDA.py                  # Exploratory data analysis
+│   │   ├── 2_Data_Cleaning.py        # Data cleaning and preprocessing
+│   │   ├── 3_NLP_Analytics.py        # NLP analysis tools (NER, Topic Modeling)
+│   │   ├── 4_Import_Embeddings.py    # Import word embeddings
+│   │   ├── 5_Synthetic_Resume_Generator.py  # Generate synthetic resumes
+│   │   ├── 6_Resume_Evaluation.py    # Evaluate resume quality
+│   │   ├── 7_Resume_Matching.py      # Match resumes to jobs
+│   │   └── 8_Meet_Our_Team.py        # Team information
+│   ├── functions/                    # Helper functions and utilities
+│   │   ├── database.py               # Database operations
+│   │   ├── nlp_database.py            # NLP data loading utilities
+│   │   ├── nlp_models.py             # NLP model implementations
+│   │   ├── nlp_components.py         # NLP visualization components
+│   │   ├── nlp_config.py             # NLP configuration
+│   │   ├── eda_components.py         # EDA visualization components
+│   │   ├── visualization.py          # General visualization utilities
+│   │   ├── components.py             # UI components
+│   │   ├── downloaderCSV.py          # CSV download utilities
+│   │   └── menu.py                   # Navigation menu
+│   ├── components/                   # Reusable UI components
+│   │   ├── header.py                 # Page header component
+│   │   ├── footer.py                 # Page footer component
+│   │   └── card.py                   # Card component
+│   ├── styles/                       # CSS styling
+│   │   └── app.css                   # Main stylesheet
+│   ├── images/                       # Image assets
+│   ├── locales/                      # Internationalization files
+│   ├── requirements.txt              # Python dependencies
+│   ├── requirements-dev.txt          # Development dependencies
+│   ├── Dockerfile                    # Docker configuration
+│   └── create_jobs_table.sql         # Database schema
+├── workspace/                        # Analysis notebooks and data
+│   ├── Data/                         # Job datasets and processing
+│   ├── Data_Cleaning/                # Data cleaning notebooks
+│   ├── NER/                          # Named Entity Recognition notebooks
+│   ├── Topic Modeling/               # LDA and LSA implementations
+│   ├── Word Embedding/               # Word2Vec and SBERT notebooks
+│   ├── Resume_testing/               # Resume matching experiments
+│   ├── models/                       # Trained models and embeddings
+│   │   ├── word2vec_model.joblib
+│   │   ├── job_embeddings_sbert_*.npy
+│   │   ├── job_embeddings_w2v_*.npy
+│   │   ├── topic_model_lda_*.joblib
+│   │   └── ner_results.json
+│   └── Proposal/                     # Project proposal documents
+├── jupyter/                          # Jupyter notebook environment
+│   ├── Dockerfile                    # Jupyter Docker configuration
+│   └── requirements.txt              # Jupyter dependencies
+├── linkedin-jobs-scraper/            # LinkedIn scraper library
+├── scraps/                           # Raw scraped data (CSV files)
+├── linkedin.py                       # LinkedIn scraper script
+├── docker-compose.yml                # Docker Compose configuration
+├── test_populate.py                  # Database population test script
+└── README.md                         # This file
 ```
 
 ## 🛠️ Installation
@@ -68,7 +108,12 @@ cd nlp-fall-2025
 For the Streamlit app:
 ```bash
 cd app-streamlit
-pip install -r requirements-nlp.txt
+pip install -r requirements.txt
+```
+
+For development dependencies:
+```bash
+pip install -r requirements-dev.txt
 ```
 
 For NLP models, you'll also need:
@@ -87,7 +132,27 @@ nltk.download('wordnet')
 
 ## 🚀 Usage
 
-### Running the Web Application
+### Running with Docker (Recommended)
+
+The project includes Docker Compose configuration for easy setup:
+
+```bash
+# Start all services (PostgreSQL, Jupyter, Streamlit)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+Services will be available at:
+- **Streamlit App**: http://localhost:48501
+- **Jupyter Notebook**: http://localhost:48888
+- **PostgreSQL**: localhost:45432
+
+### Running the Web Application Locally
 
 ```bash
 cd app-streamlit
@@ -96,46 +161,79 @@ streamlit run Home.py
 
 The app will open in your browser at `http://localhost:8501`
 
+**Note**: If running locally, ensure PostgreSQL is set up and configured in your `.env` file.
+
 ### Scraping LinkedIn Jobs
+
+**Option 1: Using Streamlit UI (Recommended)**
+1. Navigate to the "Job Crawling" page (Page 0) in the Streamlit app
+2. Select job titles you want to scrape
+3. Configure scraping parameters
+4. Start scraping (ensure `LI_AT_COOKIE` is set in your `.env` file)
+
+**Option 2: Using Command Line**
 
 **⚠️ Important: LinkedIn Cookie Required**
 
-You need to obtain your `li_at` cookie from LinkedIn:
-
-1. Log into LinkedIn in Chrome
-2. Open Developer Tools (F12)
-3. Go to Application → Cookies → `https://www.linkedin.com`
-4. Find and copy the `li_at` cookie value
+You need to obtain your `li_at` cookie from LinkedIn (see "Additional Notes" section below for detailed instructions).
 
 Then run:
 ```bash
 LI_AT_COOKIE="your_cookie_here" python linkedin.py
 ```
 
+Or set it in your `.env` file and run:
+```bash
+python linkedin.py
+```
+
 ### Running NLP Analysis
 
-Each NLP technique has dedicated Jupyter notebooks:
+#### Using the Streamlit App
+
+The Streamlit app provides interactive interfaces for:
+- **Job Crawling** (Page 0): Scrape LinkedIn jobs directly from the UI
+- **EDA** (Page 1): Explore and visualize job data
+- **Data Cleaning** (Page 2): Clean and preprocess job descriptions
+- **NLP Analytics** (Page 3): Run NER, Topic Modeling, and other NLP analyses
+- **Import Embeddings** (Page 4): Import and manage word embeddings
+- **Synthetic Resume Generator** (Page 5): Generate synthetic resumes for testing
+- **Resume Evaluation** (Page 6): Evaluate resume quality
+- **Resume Matching** (Page 7): Match resumes to job postings
+- **Meet Our Team** (Page 8): Team information
+
+#### Using Jupyter Notebooks
+
+Each NLP technique has dedicated Jupyter notebooks in the `workspace/` directory:
 
 **Named Entity Recognition:**
 ```bash
 jupyter notebook workspace/NER/NER.ipynb
+# or workspace/NER/NER_kas_edit.ipynb
 ```
 
 **Topic Modeling:**
 ```bash
-jupyter notebook workspace/Topic\ Modeling/TopicModeling_LDA.ipynb
-jupyter notebook workspace/Topic\ Modeling/TopicModeling_LSA.ipynb
+jupyter notebook workspace/Topic\ Modeling/
 ```
 
 **Word Embeddings:**
 ```bash
-jupyter notebook workspace/Word\ Embedding/Word\ Embedding_Word2Vector_UseDedup.ipynb
-jupyter notebook workspace/Word\ Embedding/Word_Embedding_SBERT_UseDedup.ipynb
+jupyter notebook workspace/Word\ Embedding/
+```
+
+**Data Cleaning:**
+```bash
+jupyter notebook workspace/Data_Cleaning/
 ```
 
 ## 📊 Features Overview
 
 ### LinkedIn Job Scraper
+
+The scraper can be run via:
+1. **Command line**: `python linkedin.py` (with `LI_AT_COOKIE` environment variable)
+2. **Streamlit UI**: Navigate to "Job Crawling" page (Page 0)
 
 Scrapes job listings with filters for:
 - Full-time and internship positions
@@ -154,6 +252,8 @@ Output CSV includes:
 - Insights
 - Description Length
 - Description
+
+Scraped data is saved to `scraps/` directory with timestamped filenames: `linkedin_jobs_YYYYMMDD_HHMMSS.csv`
 
 ### NLP Analytics
 
@@ -176,29 +276,51 @@ Output CSV includes:
 - Skill relationship analysis
 
 **4. Resume Matching**
-- Extract skills from resumes
-- Compute similarity scores
+- Extract skills from resumes (PDF parsing)
+- Compute similarity scores using embeddings
 - Rank jobs by compatibility
 - Provide match explanations
+- Support for multiple resume formats
+
+**5. Synthetic Resume Generation**
+- Generate synthetic resumes for testing
+- Customize resume content and skills
+- Export in various formats
+
+**6. Resume Evaluation**
+- Evaluate resume quality and completeness
+- Score resumes against job requirements
+- Provide improvement suggestions
 
 ## 🔧 Configuration
 
+### Environment Variables
+
+Create a `.env` file in the project root or `app-streamlit/` directory:
+
+```env
+# Database Configuration
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=PassW0rd
+POSTGRES_DB=db
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+DATABASE_URL=postgresql://admin:PassW0rd@localhost:5432/db
+
+# LinkedIn Scraper
+LI_AT_COOKIE=your_linkedin_cookie_here
+
+# Optional: OpenAI API (for advanced features)
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
 ### Job Titles to Scrape
 
-Edit `linkedin.py` to customize the job titles (lines 18-28):
-
-```python
-job_titles = [
-    'Data Scientist', 
-    'Machine Learning Engineer',
-    'Software Engineer',
-    # Add your desired titles...
-]
-```
+Edit `linkedin.py` or use the Streamlit UI (Page 0) to customize job titles. The default list includes 70+ job titles across various industries.
 
 ### Scraping Parameters
 
-In `linkedin.py`, adjust filters:
+In `linkedin.py` or the Streamlit interface, adjust filters:
 - Experience level
 - Work location (remote/hybrid/onsite)
 - Salary range
@@ -208,9 +330,18 @@ In `linkedin.py`, adjust filters:
 ## 📈 Data Pipeline
 
 1. **Collection**: LinkedIn scraper → CSV files in `scraps/`
-2. **Preprocessing**: Combine and clean data → `workspace/Data/`
-3. **Analysis**: NLP models process descriptions → Extract insights
-4. **Visualization**: Streamlit app displays results
+   - Can be run via command line or Streamlit UI (Page 0)
+2. **Data Cleaning**: Clean and preprocess data → `workspace/Data/`
+   - Use Streamlit Page 2 or Jupyter notebooks in `workspace/Data_Cleaning/`
+3. **Storage**: Store cleaned data in PostgreSQL database
+   - Database schema defined in `app-streamlit/create_jobs_table.sql`
+4. **Analysis**: NLP models process descriptions → Extract insights
+   - NER: Extract skills, technologies, qualifications
+   - Topic Modeling: Discover themes using LDA/LSA
+   - Word Embeddings: Generate semantic representations
+5. **Visualization**: Streamlit app displays results
+   - Interactive dashboards and visualizations
+   - Export capabilities for analysis results
 
 ## 🤝 Team
 
@@ -237,42 +368,44 @@ Capstone Fall 2025 Team Members
 - [Gensim Topic Modeling](https://radimrehurek.com/gensim/)
 - [Sentence-BERT](https://www.sbert.net/)
 - [Streamlit Documentation](https://docs.streamlit.io/)
+- [LinkedIn Jobs Scraper](https://github.com/spaam/linkedin-jobs-scraper)
+- [pgvector (PostgreSQL vector extension)](https://github.com/pgvector/pgvector)
 
 ## 🐛 Troubleshooting
 
 **Issue**: Scraper fails to load jobs
-- **Solution**: Update your `li_at` cookie (cookies expire periodically)
+- **Solution**: Update your `li_at` cookie (cookies expire periodically). Get it from browser DevTools → Application → Cookies → LinkedIn
 
 **Issue**: NER model not found
-- **Solution**: Download spaCy models: `python -m spacy download en_core_web_sm`
+- **Solution**: Download spaCy models:
+  ```bash
+  python -m spacy download en_core_web_sm
+  python -m spacy download en_core_web_lg
+  ```
 
 **Issue**: Memory errors with large datasets
-- **Solution**: Process data in chunks or use sampling in the notebooks
+- **Solution**: Process data in chunks or use sampling in the notebooks. Consider using the database for large-scale operations.
+
+**Issue**: Database connection errors
+- **Solution**: Ensure PostgreSQL is running. With Docker: `docker-compose up nlp-postgres`. Check `.env` file for correct credentials.
+
+**Issue**: Docker services not starting
+- **Solution**: Check Docker logs: `docker-compose logs`. Ensure ports 48501, 48888, and 45432 are not in use.
+
+**Issue**: Import errors in Streamlit
+- **Solution**: Ensure you're in the `app-streamlit` directory when running, or use `utils.py` which handles workspace path initialization.
 
 ## 📄 License
 
 [Add your license here]
 
-## LinkedIn Job Scraper
+## 📝 Additional Notes
 
-This project contains a LinkedIn job scraper that collects job postings based on various job titles and saves them to CSV files.
+### LinkedIn Cookie Setup
 
-### Prerequisites
+**⚠️ Important: LinkedIn Cookie Required**
 
-- Python 3.7+
-- Chrome browser installed
-- LinkedIn account
-
-### Installation
-
-1. Install the required package:
-```bash
-pip install linkedin-jobs-scraper
-```
-
-### Setup - Important: LinkedIn Cookie Required
-
-**You MUST obtain the `li_at` cookie from your LinkedIn account for the scraper to work.**
+You MUST obtain the `li_at` cookie from your LinkedIn account for the scraper to work.
 
 #### How to get your `li_at` cookie:
 
@@ -283,74 +416,24 @@ pip install linkedin-jobs-scraper
 5. Find the cookie named `li_at`
 6. Copy the **Value** of the `li_at` cookie (it will be a long string)
 
-![LinkedIn Cookie Location](/scraps/linkedin_cookie.png)
+**Note:** Keep this cookie value private and secure. Do not share it or commit it to version control. Store it in your `.env` file or pass it as an environment variable.
 
-**Note:** Keep this cookie value private and secure. Do not share it or commit it to version control.
+### Job Titles
 
-#### Configure the cookie in your code:
+The scraper supports 70+ different job titles across various industries including:
+- Technology (Software Engineer, Data Scientist, DevOps Engineer, etc.)
+- Marketing (Digital Marketing Specialist, SEO Specialist, etc.)
+- Finance (Investment Analyst, Financial Planner, etc.)
+- Engineering (Civil Engineer, Mechanical Engineer, etc.)
+- Healthcare (Pharmacist, Nurse Practitioner, etc.)
+- Education (Teacher, School Counselor, etc.)
 
-You'll need to pass the `li_at` cookie to the scraper. This is typically done by setting it in the Chrome options when initializing the scraper.
+You can customize the job titles list in `linkedin.py` or use the Streamlit UI (Page 0) to select specific titles.
 
-### Job Titles to be Scraped
+### Scraper Behavior
 
-**⚠️ Important: Update the job titles list based on your needs!**
-
-Before running the script, you should modify the `job_titles` list in `linkedin.py` (lines 18-28) to include the job titles you want to scrape. The current list includes the following as an example:
-
-- Digital Marketing Specialist, Business Development Manager
-- Quality Assurance Analyst, Systems Administrator, Database Administrator, Cybersecurity Analyst, DevOps Engineer
-- Mobile App Developer, Cloud Solutions Architect, Technical Support Engineer, SEO Specialist, Social Media Manager
-- Content Marketing Manager, E-commerce Manager, Brand Manager, Public Relations Specialist, Event Coordinator
-- Logistics Manager, Supply Chain Analyst, Operations Analyst, Risk Manager, Compliance Officer, Auditor, Tax Specialist
-- Investment Analyst, Portfolio Manager, Real Estate Agent, Insurance Underwriter, Claims Adjuster, Actuary, Loan Officer, Credit Analyst, Treasury Analyst, Financial Planner
-- Marketing Analyst, Market Research Analyst, Advertising Manager, Media Planner, Copywriter, Video Producer, Animator, Illustrator, Interior Designer, Architect
-- Civil Engineer, Mechanical Engineer, Electrical Engineer, Chemical Engineer, Environmental Engineer, Biomedical Engineer, Industrial Engineer, Aerospace Engineer, Petroleum Engineer, Nuclear Engineer
-- Pharmacist, Nurse Practitioner, Physician Assistant, Medical Laboratory Technician, Radiologic Technologist, Physical Therapist, Occupational Therapist, Speech-Language Pathologist, Dietitian, Respiratory Therapist
-- Teacher, School Counselor, Librarian, Social Worker, Psychologist, Counselor, Therapist, Coach, Trainer, Recruiter
-
-**Total: 70 different job titles**
-
-**To customize:** Open `linkedin.py` and edit the `job_titles` list to include only the roles you're interested in. You can add or remove job titles as needed.
-
-The script will scrape each job title sequentially with a random delay (60-240 seconds) between each title to avoid rate limiting.
-
-### Usage
-
-Run the scraper:
-```bash
-
-LI_AT_COOKIE="please put your li_at cookie here" python linkedin.py
-
-```
-
-### What it does
-
-- Scrapes job listings for 70+ different job titles
-- Filters for:
-  - Full-time and internship positions
-  - Remote work options
-  - Mid to senior experience level
-  - $100K+ base salary
-  - Posted within the last month
-- Saves each scrape session to a timestamped CSV file in the format: `linkedin_jobs_YYYYMMDD_HHMMSS.csv`
-- Implements delays between requests to avoid rate limiting
-
-### Output
-
-Each CSV file contains the following columns:
-- Job Title
-- Company
-- Company Link
-- Date
-- Date Text
-- Job Link
-- Insights
-- Description Length
-- Description
-
-### Important Notes
-
-- The scraper uses a 2-second delay between requests to avoid being rate-limited
+- Uses random delays (60-240 seconds) between job title searches to avoid rate limiting
+- 2-second delay between individual requests
 - Runs in headless mode by default
-- A random wait time (60-240 seconds) is added between different job title searches
-- All scraped data is saved in the `scraps/` directory
+- All scraped data is timestamped: `linkedin_jobs_YYYYMMDD_HHMMSS.csv`
+- Data saved to `scraps/` directory

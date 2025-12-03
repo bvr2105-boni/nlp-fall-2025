@@ -130,7 +130,7 @@ navigation_cards = [
         "key": "nav_eda_btn",
     },
     {
-        "title": "AI Analytics",
+        "title": "NLP Analytics",
         "description": "Extract skills, topics, and insights from job descriptions using advanced machine learning.",
         "button": "Run Analytics",
         "page": "pages/3_NLP_Analytics.py",

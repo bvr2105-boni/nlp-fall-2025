@@ -447,9 +447,23 @@ def generate_local_embedding(text: str, method: str = "sbert") -> Optional[np.nd
                     return None
             return None
     elif method == "word2vec":
-        # This would require a trained Word2Vec model
-        # For now, return None as we need to train/load the model first
-        return None
+        """
+        Generate embedding using a trained Word2Vec model, mirroring the SBERT path:
+        - Lazily load the trained Word2Vec model via load_trained_word2vec_model()
+        - Tokenize the input text with simple_tokenize()
+        - Compute a document embedding with get_doc_embedding_w2v()
+        """
+        try:
+            model = load_trained_word2vec_model()
+            if model is None:
+                print("Word2Vec model not available in generate_local_embedding()")
+                return None
+            tokens = simple_tokenize(text)
+            emb = get_doc_embedding_w2v(tokens, model)
+            return emb
+        except Exception as e:
+            print(f"Error generating Word2Vec embedding: {e}")
+            return None
     else:
         return None
 
@@ -506,7 +520,8 @@ def load_trained_word2vec_model(use_pretrained: bool = False, pretrained_path: s
             "GoogleNews-vectors-negative300.bin",
             "GoogleNews-vectors-negative300.bin.gz",
             "word2vec-google-news-300.bin",
-            "word2vec-google-news-300.bin.gz"
+            "word2vec-google-news-300.bin.gz",
+            "job_embeddings_w2v_14760_jobs_metadata.joblib"
         ]
         
         # If specific path provided, use it

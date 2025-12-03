@@ -77,11 +77,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Tabs for different analyses
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3 = st.tabs([
     "Load Data",
     "Market Overview",
-    "Companies & Locations",
-    "Skills Analysis"
+    "Companies & Locations"
 ])
 
 with tab1:
@@ -186,7 +185,6 @@ with tab2:
         
         # Top job titles
         if 'Job Title' in df.columns:
-            st.markdown("#### Top Job Titles")
             top_titles = df['Job Title'].value_counts().head(20)
             
             fig = px.bar(
@@ -234,7 +232,7 @@ with tab2:
                 st.plotly_chart(fig2, use_container_width=True)
 
 with tab3:
-    st.markdown("### Company & Location Analysis")
+    st.markdown("### Company Analysis")
     
     if not st.session_state.data_loaded:
         st.info("📌 Please load the dataset first from the 'Load Dataset' tab.")
@@ -243,7 +241,6 @@ with tab3:
         
         # Top companies
         if 'Company' in df.columns:
-            st.markdown("#### Top Companies by Job Postings")
             top_companies = df['Company'].value_counts().head(20)
             
             fig = px.bar(
@@ -296,87 +293,3 @@ with tab3:
             )
             fig.update_layout(yaxis={'categoryorder': 'total ascending'})
             st.plotly_chart(fig, use_container_width=True)
-
-with tab4:
-    st.markdown("### Skills & Requirements Analysis")
-    
-    if not st.session_state.data_loaded:
-        st.info("📌 Please load the dataset first from the 'Load Dataset' tab.")
-    else:
-        df = st.session_state.jobs_df
-        
-        st.markdown("""
-        This section analyzes skills and requirements from job descriptions using text analysis.
-        
-        **Available NLP Features:**
-        - Named Entity Recognition (NER) - Extract skills, technologies, and qualifications
-        - Topic Modeling - Discover common themes in job descriptions
-        - Word Embeddings - Find similar jobs and skill relationships
-        
-        For detailed NLP analysis, please visit the **NLP Analytics** page.
-        """)
-        
-        # Simple keyword analysis
-        if 'Description' in df.columns:
-            st.markdown("#### Common Keywords in Job Descriptions")
-            
-            # Common tech keywords to search for
-            keywords = [
-                'python', 'java', 'javascript', 'sql', 'aws', 'azure', 'docker', 
-                'kubernetes', 'machine learning', 'data science', 'ai', 'nlp',
-                'react', 'node.js', 'typescript', 'git', 'agile', 'scrum',
-                'bachelor', 'master', 'phd', 'remote', 'hybrid', 'onsite',
-                'senior', 'junior', 'lead', 'manager', 'director'
-            ]
-            
-            keyword_counts = {}
-            for keyword in keywords:
-                count = df['Description'].str.lower().str.contains(keyword, na=False).sum()
-                if count > 0:
-                    keyword_counts[keyword] = count
-            
-            if keyword_counts:
-                keyword_df = pd.DataFrame.from_dict(
-                    keyword_counts, 
-                    orient='index', 
-                    columns=['Count']
-                ).sort_values('Count', ascending=False)
-                
-                fig = px.bar(
-                    keyword_df.head(50),
-                    x=keyword_df.head(50).index,
-                    y='Count',
-                    title='Top Keywords in Job Descriptions',
-                    labels={'x': 'Keyword', 'y': 'Number of Mentions'}
-                )
-                fig.update_layout(xaxis_tickangle=-45)
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # Experience level analysis
-                st.markdown("#### Experience Level Distribution")
-                experience_keywords = {
-                    'Entry Level': ['junior', 'entry', 'graduate', '0-2 years', '1-3 years'],
-                    'Mid Level': ['mid', '3-5 years', '4-6 years', 'intermediate'],
-                    'Senior Level': ['senior', 'lead', '7+ years', '8+ years', '10+ years'],
-                    'Executive': ['director', 'vp', 'chief', 'executive', 'manager']
-                }
-                
-                experience_counts = {}
-                for level, terms in experience_keywords.items():
-                    count = sum(df['Description'].str.lower().str.contains(term, na=False).sum() for term in terms)
-                    if count > 0:
-                        experience_counts[level] = count
-                
-                if experience_counts:
-                    exp_df = pd.DataFrame.from_dict(experience_counts, orient='index', columns=['Count'])
-                    fig2 = px.pie(
-                        exp_df,
-                        values='Count',
-                        names=exp_df.index,
-                        title='Experience Level Distribution'
-                    )
-                    st.plotly_chart(fig2, use_container_width=True)
-
-# Footer
-st.markdown("---")
-st.markdown("💡 **Tip:** Use the NLP Analytics page for advanced text analysis including NER, Topic Modeling, and Word Embeddings.")

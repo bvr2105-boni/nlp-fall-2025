@@ -1441,7 +1441,7 @@ try:
 except Exception:
     pass
 
-st.title("AI Analytics")
+st.title("NLP Analytics")
 
 # Professional introduction
 st.markdown("""
@@ -1458,6 +1458,10 @@ if 'jobs_df' not in st.session_state:
     st.session_state.jobs_df = None
 if 'resumes_df' not in st.session_state:
     st.session_state.resumes_df = None
+if 'cleaned_jobs_df' not in st.session_state:
+    st.session_state.cleaned_jobs_df = None
+if 'job_data_auto_load_attempted' not in st.session_state:
+    st.session_state.job_data_auto_load_attempted = False
 if 'ner_results' not in st.session_state:
     # Try to load saved NER results on page initialization
     saved_results = load_ner_results()
@@ -1513,6 +1517,15 @@ def load_job_data():
                     df = pd.read_csv(data_path)
                     return df
     return None
+
+# Auto-load cleaned job data if not already loaded
+if st.session_state.cleaned_jobs_df is None and not st.session_state.job_data_auto_load_attempted:
+    with st.spinner("🔄 Auto-loading cleaned job data..."):
+        df = load_job_data()
+        if df is not None:
+            st.session_state.cleaned_jobs_df = df
+            st.session_state.job_data_auto_load_attempted = True
+            st.rerun()
 
 # Function to load resume data
 @st.cache_data
@@ -2297,16 +2310,56 @@ with tab3:
         
         elif embedding_method == "Sentence-BERT (SBERT)":
             if st.session_state.sbert_model is None:
-                if st.button("Load SBERT Model", key="load_sbert"):
-                    if not SENTENCE_TRANSFORMERS_AVAILABLE:
-                        st.error("Sentence Transformers not available")
-                    else:
-                        with st.spinner("Loading SBERT model..."):
-                            model = load_sbert_model()
-                            if model:
+                # If a saved SBERT model exists locally, offer the same load/new pattern as Word2Vec
+                workspace_path = st.session_state.get('workspace_path')
+                models_dir = None
+                saved_sbert_path = None
+                if workspace_path:
+                    models_dir = os.path.join(workspace_path, "models")
+                else:
+                    models_dir = "models"
+                # We expect a locally fine‑tuned SBERT model to be saved as a directory
+                # (using SentenceTransformer.save()), e.g. models/sbert_model
+                candidate_path = os.path.join(models_dir, "sbert_model")
+                if os.path.isdir(candidate_path) and SENTENCE_TRANSFORMERS_AVAILABLE:
+                    saved_sbert_path = candidate_path
+
+                if saved_sbert_path:
+                    st.info(f"📁 Found saved SBERT model at `{os.path.basename(saved_sbert_path)}`.")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("Load Saved SBERT Model", key="load_sbert_saved"):
+                            try:
+                                # Load SBERT model from local directory
+                                from sentence_transformers import SentenceTransformer
+                                model = SentenceTransformer(saved_sbert_path)
                                 st.session_state.sbert_model = model
-                                st.success("✅ SBERT model loaded!")
+                                st.success("✅ Loaded saved SBERT model!")
                                 st.rerun()
+                            except Exception as e:
+                                st.error(f"Failed to load saved SBERT model: {e}")
+                    with col2:
+                        if st.button("Load Pretrained SBERT Model", key="load_sbert_pretrained"):
+                            if not SENTENCE_TRANSFORMERS_AVAILABLE:
+                                st.error("Sentence Transformers not available")
+                            else:
+                                with st.spinner("Loading SBERT model from HuggingFace..."):
+                                    model = load_sbert_model()
+                                    if model:
+                                        st.session_state.sbert_model = model
+                                        st.success("✅ SBERT model loaded!")
+                                        st.rerun()
+                else:
+                    if st.button("Load SBERT Model", key="load_sbert"):
+                        if not SENTENCE_TRANSFORMERS_AVAILABLE:
+                            st.error("Sentence Transformers not available")
+                        else:
+                            with st.spinner("Loading SBERT model..."):
+                                model = load_sbert_model()
+                                if model:
+                                    st.session_state.sbert_model = model
+                                    st.success("✅ SBERT model loaded!")
+                                    st.rerun()
             else:
                 st.success("✅ SBERT model ready")
                 
