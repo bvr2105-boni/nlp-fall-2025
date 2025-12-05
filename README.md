@@ -13,6 +13,11 @@ This project is an NLP-powered platform for analyzing LinkedIn job postings usin
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.32+-red.svg)](https://streamlit.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791.svg)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
+[![Ollama](https://img.shields.io/badge/Ollama-LLM-1292B2.svg)](https://ollama.ai/)
+[![Jaccard](https://img.shields.io/badge/Jaccard-Similarity-FF6B6B.svg)](https://en.wikipedia.org/wiki/Jaccard_index)
+[![Word2Vec](https://img.shields.io/badge/Word2Vec-Embeddings-4285F4.svg)](https://code.google.com/archive/p/word2vec/)
+[![SBERT](https://img.shields.io/badge/SBERT-Sentence--BERT-FF9800.svg)](https://www.sbert.net/)
+[![Topic Modeling](https://img.shields.io/badge/Topic%20Modeling-LDA%2FLSA-9C27B0.svg)](https://en.wikipedia.org/wiki/Topic_model)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 👥 Course Information
