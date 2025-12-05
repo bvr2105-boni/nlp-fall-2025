@@ -159,26 +159,10 @@ Services will be available at:
 - **Jupyter Notebook**: http://localhost:48888
 - **PostgreSQL**: localhost:45432
 
-### Running the Web Application Locally
-
-```bash
-cd app-streamlit
-streamlit run Home.py
-```
-
-The app will open in your browser at `http://localhost:8501`
-
 **Note**: If running locally, ensure PostgreSQL is set up and configured in your `.env` file.
 
 ### Scraping LinkedIn Jobs
 
-**Option 1: Using Streamlit UI (Recommended)**
-1. Navigate to the "Job Crawling" page (Page 0) in the Streamlit app
-2. Select job titles you want to scrape
-3. Configure scraping parameters
-4. Start scraping (ensure `LI_AT_COOKIE` is set in your `.env` file)
-
-**Option 2: Using Command Line**
 
 **⚠️ Important: LinkedIn Cookie Required**
 
