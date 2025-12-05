@@ -150,12 +150,6 @@ The project includes Docker Compose configuration for easy setup:
 ```bash
 # Start all services (PostgreSQL, Jupyter, Streamlit)
 docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
 ```
 
 Services will be available at:
