@@ -114,33 +114,6 @@ git clone https://github.com/yourusername/nlp-fall-2025.git
 cd nlp-fall-2025
 ```
 
-2. **Install dependencies**
-
-For the Streamlit app:
-```bash
-cd app-streamlit
-pip install -r requirements.txt
-```
-
-For development dependencies:
-```bash
-pip install -r requirements-dev.txt
-```
-
-For NLP models, you'll also need:
-```bash
-python -m spacy download en_core_web_sm
-python -m spacy download en_core_web_lg
-```
-
-3. **Download NLTK data** (if needed)
-```python
-import nltk
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('wordnet')
-```
-
 ## 🚀 Usage
 
 ### Running with Docker (Recommended)
