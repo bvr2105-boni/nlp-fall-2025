@@ -2,7 +2,11 @@
 
 ## LinkedIn Job Analysis Platform
 
+**Project Date:** Fall 2025
+
 This project is an NLP-powered platform for analyzing LinkedIn job postings using advanced natural language processing techniques including Named Entity Recognition (NER), Topic Modeling, and Word Embeddings.
+
+📄 **[Final Presentation PDF](Final_Presentation_NLP.pdf)** - Comprehensive project presentation covering business background, methodology, results, and evaluation.
 
 ## 🚀 Features
 
@@ -31,6 +35,7 @@ This project is an NLP-powered platform for analyzing LinkedIn job postings usin
 nlp-fall-2025/
 ├── app-streamlit/                    # Streamlit web application
 │   ├── Home.py                       # Main dashboard
+│   ├── utils.py                      # Utility functions and path helpers
 │   ├── pages/                        # Application pages
 │   │   ├── 0_Job_Crawling.py         # LinkedIn job scraper interface
 │   │   ├── 1_EDA.py                  # Exploratory data analysis
@@ -70,12 +75,14 @@ nlp-fall-2025/
 │   ├── NER/                          # Named Entity Recognition notebooks
 │   ├── Topic Modeling/               # LDA and LSA implementations
 │   ├── Word Embedding/               # Word2Vec and SBERT notebooks
+│   ├── Scrapers/                     # Scraper testing notebooks
 │   ├── Resume_testing/               # Resume matching experiments
 │   ├── models/                       # Trained models and embeddings
 │   │   ├── word2vec_model.joblib
 │   │   ├── job_embeddings_sbert_*.npy
 │   │   ├── job_embeddings_w2v_*.npy
 │   │   ├── topic_model_lda_*.joblib
+│   │   ├── topic_model_lsa_*.joblib
 │   │   └── ner_results.json
 │   └── Proposal/                     # Project proposal documents
 ├── jupyter/                          # Jupyter notebook environment
@@ -83,9 +90,11 @@ nlp-fall-2025/
 │   └── requirements.txt              # Jupyter dependencies
 ├── linkedin-jobs-scraper/            # LinkedIn scraper library
 ├── scraps/                           # Raw scraped data (CSV files)
+├── images/                           # Project images and screenshots
 ├── linkedin.py                       # LinkedIn scraper script
 ├── docker-compose.yml                # Docker Compose configuration
-├── test_populate.py                  # Database population test script
+├── Final_Presentation_NLP.pdf        # Final project presentation
+├── Final_Presentation_NLP.pptx       # Final project presentation (PowerPoint)
 └── README.md                         # This file
 ```
 
@@ -380,6 +389,10 @@ Capstone Fall 2025 Team Members
 
 ## 📚 Resources
 
+### Project Documentation
+- [Final Presentation PDF](Final_Presentation_NLP.pdf) - Complete project presentation with methodology, results, and evaluation
+
+### External Resources
 - [spaCy Documentation](https://spacy.io/)
 - [Gensim Topic Modeling](https://radimrehurek.com/gensim/)
 - [Sentence-BERT](https://www.sbert.net/)
