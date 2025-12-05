@@ -1,12 +1,40 @@
-# nlp-fall-2025
-
-## LinkedIn Job Analysis Platform
+# LinkedIn Job Analysis Platform
 
 **Project Date:** Fall 2025
 
 This project is an NLP-powered platform for analyzing LinkedIn job postings using advanced natural language processing techniques including Named Entity Recognition (NER), Topic Modeling, and Word Embeddings.
 
 📄 **[Final Presentation PDF](Final_Presentation_NLP.pdf)** - Comprehensive project presentation covering business background, methodology, results, and evaluation.
+
+## 🛠️ Tech Stack
+
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15+-orange.svg)](https://www.tensorflow.org/)
+
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.32+-red.svg)](https://streamlit.io/)
+
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791.svg)](https://www.postgresql.org/)
+
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## 👥 Course Information
+
+### Instructor
+**Samar Deen**  
+Email: sd3912@columbia.edu  
+
+
+## 🤝 Team
+
+Applied Text and Natural Language Analytics - Fall 2025 Team Members
+- Boni Vasius Rosen @bvr2105-boni
+- Minkyung (Ginny) Kim @ginny-1334
+- Kas Kiatsukasem
+- Kibaek Kim @hyper07
+- Suchakrey (Philip) Nitisanon
 
 ## 🚀 Features
 
@@ -325,19 +353,6 @@ In `linkedin.py` or the Streamlit interface, adjust filters:
 5. **Visualization**: Streamlit app displays results
    - Interactive dashboards and visualizations
    - Export capabilities for analysis results
-
-## 🤝 Team
-
-Capstone Fall 2025 Team Members
-Boni Vasius Rosen@bvr2105-boni
-
-Minkyung (Ginny) Kim@ginny-1334
-
-Kas Kiatsukasem
-
-Kibaek Kim@hyper07
-
-Suchakrey (Philip) Nitisanon
 
 ## 📝 Notes
 
