@@ -371,7 +371,15 @@ In `linkedin.py` or the Streamlit interface, adjust filters:
 ## 🤝 Team
 
 Capstone Fall 2025 Team Members
-- [Team information from proposal]
+Boni Vasius Rosen@bvr2105-boni
+
+Minkyung (Ginny) Kim@ginny-1334
+
+Kas Kiatsukasem
+
+Kibaek Kim@hyper07
+
+Suchakrey (Philip) Nitisanon
 
 ## 📝 Notes
 
@@ -400,33 +408,17 @@ Capstone Fall 2025 Team Members
 - [LinkedIn Jobs Scraper](https://github.com/spaam/linkedin-jobs-scraper)
 - [pgvector (PostgreSQL vector extension)](https://github.com/pgvector/pgvector)
 
-## 🐛 Troubleshooting
-
-**Issue**: Scraper fails to load jobs
-- **Solution**: Update your `li_at` cookie (cookies expire periodically). Get it from browser DevTools → Application → Cookies → LinkedIn
-
-**Issue**: NER model not found
-- **Solution**: Download spaCy models:
-  ```bash
-  python -m spacy download en_core_web_sm
-  python -m spacy download en_core_web_lg
-  ```
-
-**Issue**: Memory errors with large datasets
-- **Solution**: Process data in chunks or use sampling in the notebooks. Consider using the database for large-scale operations.
-
-**Issue**: Database connection errors
-- **Solution**: Ensure PostgreSQL is running. With Docker: `docker-compose up nlp-postgres`. Check `.env` file for correct credentials.
-
-**Issue**: Docker services not starting
-- **Solution**: Check Docker logs: `docker-compose logs`. Ensure ports 48501, 48888, and 45432 are not in use.
-
-**Issue**: Import errors in Streamlit
-- **Solution**: Ensure you're in the `app-streamlit` directory when running, or use `utils.py` which handles workspace path initialization.
 
 ## 📄 License
 
-[Add your license here]
+This project is available for educational and research purposes. If you would like to use this code, data, or any part of this project for commercial purposes or in your own projects, please contact the project maintainers to request permission.
+
+**For use requests, please include:**
+- Your name and affiliation
+- Intended use case
+- Scope of usage (commercial, academic, personal, etc.)
+
+We're happy to discuss usage terms and are generally open to collaboration and sharing, but we'd like to know how the project is being used.
 
 ## 📝 Additional Notes
 
