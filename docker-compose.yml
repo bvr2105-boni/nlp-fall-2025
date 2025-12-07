@@ -29,11 +29,21 @@ services:
       - ~/Documents:/home/jovyan/Documents
       - ~/Downloads:/home/jovyan/Downloads
       - ./linkedin-jobs-scraper:/home/jovyan/linkedin-jobs-scraper
+      - ./app-streamlit:/app-streamlit
     ports:
       - 48888:8888
       - 45001:5001
     networks:
       - nlp-net
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=PassW0rd
+      - POSTGRES_DB=db
+      - POSTGRES_HOST=nlp-postgres
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgresql://admin:PassW0rd@nlp-postgres:5432/db
+    depends_on:
+      - nlp-postgres
     command: "start-notebook.sh --NotebookApp.token="
 
   nlp-streamlit-app:

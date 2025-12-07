@@ -1,0 +1,30 @@
+# Vector Search and Evaluation Module Requirements
+# ==================================================
+
+# Core dependencies (required)
+numpy>=1.21.0
+pandas>=1.3.0
+scikit-learn>=1.0.0
+
+# Optional dependencies for full functionality
+
+# SBERT embeddings (recommended for best performance)
+sentence-transformers>=2.2.0
+torch>=1.9.0
+
+# Word2Vec embeddings (alternative to SBERT)
+gensim>=4.0.0
+
+# Skill extraction with NER
+spacy>=3.0.0
+# After installing spacy, run: python -m spacy download en_core_web_sm
+
+# PDF processing
+pypdf>=3.0.0
+
+# Model persistence
+joblib>=1.0.0
+
+# LLM evaluation with Ollama
+ollama>=0.1.0
+

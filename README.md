@@ -143,6 +143,22 @@ git clone https://github.com/yourusername/nlp-fall-2025.git
 cd nlp-fall-2025
 ```
 
+2. **Install spaCy models** (Required for NER functionality)
+   
+   **Option A: Using the setup script (Recommended)**
+   ```bash
+   chmod +x setup_spacy_models.sh
+   ./setup_spacy_models.sh
+   ```
+   
+   **Option B: Manual installation**
+   ```bash
+   python -m spacy download en_core_web_sm
+   python -m spacy download en_core_web_lg  # Optional: Large model for better NER
+   ```
+   
+   **Note:** If using Docker, the spaCy models are automatically installed during the Docker build process.
+
 ## Usage
 
 ### Running with Docker (Recommended)

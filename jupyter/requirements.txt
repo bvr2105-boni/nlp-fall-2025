@@ -60,3 +60,16 @@ regex
 selenium>=4.16.0
 wheel
 pytest
+
+# NLP and ML packages
+gensim
+sentence-transformers
+torch
+torchaudio
+torchvision
+transformers
+nltk
+wordcloud
+
+# LLM packages
+ollama

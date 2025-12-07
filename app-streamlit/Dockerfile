@@ -43,5 +43,6 @@ RUN pip install --upgrade pip setuptools wheel \
     && pip install -r requirements.txt \
     && pip install -r requirements-dev.txt \
     && python -m spacy download en_core_web_sm \
+    && python -m spacy download en_core_web_lg || echo "Note: en_core_web_lg is optional (large model)" \
     && rm -rf /root/.cache/pip
 

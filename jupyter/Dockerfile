@@ -35,7 +35,27 @@ ENV PATH=$JAVA_HOME/bin:$PATH
 
 # Copy and install requirements as root first
 COPY ${REQUIREMENTS_PATH} /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+
+# Verify requirements file was copied and show first few lines
+RUN echo "=== Verifying requirements.txt ===" && \
+    ls -la /tmp/requirements.txt && \
+    head -10 /tmp/requirements.txt || (echo "ERROR: requirements.txt not found" && exit 1)
+
+# Install Python packages
+# The Jupyter minimal notebook base image uses conda, but pip should work
+RUN echo "=== Installing Python packages ===" && \
+    python --version && \
+    pip --version && \
+    pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    echo "=== Installing from requirements.txt ===" && \
+    pip install --no-cache-dir -r /tmp/requirements.txt && \
+    echo "=== Installing spaCy models ===" && \
+    python -m spacy download en_core_web_sm && \
+    python -m spacy download en_core_web_lg && \
+    echo "=== Verifying pandas installation ===" && \
+    python -c "import pandas; print(f'✓ pandas {pandas.__version__} installed successfully')" && \
+    pip list | grep -E "(pandas|numpy|matplotlib)" || \
+    (echo "ERROR: Critical packages missing!" && pip list && exit 1)
 
 # Switch to non-root user after installation
 USER ${NB_UID}
