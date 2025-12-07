@@ -1,247 +1,247 @@
 {
-  "total_entities": 491802,
-  "unique_skills": 238,
-  "unique_orgs": 223337,
+  "total_entities": 15859,
+  "unique_skills": 160,
+  "unique_orgs": 11338,
   "skill_counts": [
     [
       "communication",
-      7049
+      809
     ],
     [
-      "software development",
-      4038
+      "seo",
+      422
+    ],
+    [
+      "procurement",
+      383
+    ],
+    [
+      "logistics",
+      376
+    ],
+    [
+      "user research",
+      240
+    ],
+    [
+      "budgeting",
+      215
+    ],
+    [
+      "digital marketing",
+      175
     ],
     [
       "collaboration",
-      3864
-    ],
-    [
-      "leadership",
-      3577
-    ],
-    [
-      "python",
-      3212
-    ],
-    [
-      "agile",
-      2820
-    ],
-    [
-      "aws",
-      2784
-    ],
-    [
-      "javascript",
-      2628
-    ],
-    [
-      "java",
-      2370
-    ],
-    [
-      "ci/cd",
-      2340
-    ],
-    [
-      "sql",
-      2246
-    ],
-    [
-      "typescript",
-      2181
-    ],
-    [
-      "azure",
-      1934
+      160
     ],
     [
       "reporting",
-      1730
+      160
     ],
     [
-      "go",
-      1516
+      "market research",
+      149
     ],
     [
-      "kubernetes",
-      1502
+      "email marketing",
+      128
     ],
     [
-      "attention to detail",
-      1496
+      "java",
+      127
     ],
     [
-      "git",
-      1496
+      "data analysis",
+      125
     ],
     [
-      "docker",
-      1486
-    ],
-    [
-      "problem-solving skills",
-      1390
-    ],
-    [
-      "mentoring",
-      1178
-    ],
-    [
-      "microservices",
-      1136
-    ],
-    [
-      "c#",
-      1071
-    ],
-    [
-      "gcp",
-      1050
-    ],
-    [
-      "c++",
-      974
+      "javascript",
+      124
     ],
     [
       "machine learning",
-      962
+      111
     ],
     [
-      "github",
-      934
+      "agile",
+      110
     ],
     [
-      "project management",
-      916
+      "ci/cd",
+      97
     ],
     [
-      "scrum",
-      902
+      "strategic planning",
+      91
     ],
     [
-      "distributed systems",
-      883
+      "sql",
+      85
+    ],
+    [
+      "software development",
+      83
+    ],
+    [
+      "aws",
+      82
+    ],
+    [
+      "financial reporting",
+      82
+    ],
+    [
+      "content marketing",
+      74
+    ],
+    [
+      "sem",
+      65
+    ],
+    [
+      "business intelligence",
+      65
+    ],
+    [
+      "azure",
+      64
+    ],
+    [
+      "financial analysis",
+      63
+    ],
+    [
+      "statistical analysis",
+      62
+    ],
+    [
+      "python",
+      62
+    ],
+    [
+      "mentoring",
+      56
     ]
   ],
   "entity_counts": [
     [
       "ORG",
-      223337
-    ],
-    [
-      "PERSON",
-      70559
-    ],
-    [
-      "GPE",
-      60873
+      11338
     ],
     [
       "DATE",
-      45739
+      938
+    ],
+    [
+      "GPE",
+      859
+    ],
+    [
+      "PERSON",
+      812
     ],
     [
       "CARDINAL",
-      28931
-    ],
-    [
-      "MONEY",
-      11000
-    ],
-    [
-      "NORP",
-      9916
+      544
     ],
     [
       "PRODUCT",
-      9095
+      363
+    ],
+    [
+      "MONEY",
+      255
+    ],
+    [
+      "NORP",
+      128
     ],
     [
       "WORK_OF_ART",
-      6756
-    ],
-    [
-      "LOC",
-      4809
-    ],
-    [
-      "TIME",
-      4408
-    ],
-    [
-      "ORDINAL",
-      4316
+      103
     ],
     [
       "PERCENT",
-      4195
+      101
+    ],
+    [
+      "TIME",
+      96
+    ],
+    [
+      "ORDINAL",
+      88
+    ],
+    [
+      "LOC",
+      86
     ],
     [
       "FAC",
-      2905
+      45
     ],
     [
       "LANGUAGE",
-      2021
+      39
     ]
   ],
   "skill_categories": [
     [
       "Other",
-      30402
+      2313
     ],
     [
       "Soft Skills",
-      18099
-    ],
-    [
-      "Programming Languages",
-      14633
-    ],
-    [
-      "Cloud & DevOps",
-      13214
-    ],
-    [
-      "Databases",
-      5815
-    ],
-    [
-      "Enterprise Tools",
-      1537
-    ],
-    [
-      "Machine Learning",
-      1170
-    ],
-    [
-      "Business Skills",
-      1090
+      1070
     ],
     [
       "Marketing & Sales",
-      835
+      951
     ],
     [
-      "BI & Visualization",
-      812
+      "Programming Languages",
+      437
+    ],
+    [
+      "Cloud & DevOps",
+      367
+    ],
+    [
+      "Business Skills",
+      342
     ],
     [
       "Product & Design",
-      803
+      253
+    ],
+    [
+      "Databases",
+      180
+    ],
+    [
+      "Machine Learning",
+      118
+    ],
+    [
+      "Enterprise Tools",
+      26
+    ],
+    [
+      "BI & Visualization",
+      13
     ],
     [
       "Data Tools",
-      532
-    ],
-    [
-      "NLP & AI",
-      290
+      10
     ],
     [
       "Frameworks & Libraries",
-      171
+      4
+    ],
+    [
+      "NLP & AI",
+      4
     ]
   ],
   "model_used": "en_core_web_lg",
@@ -251,5 +251,5 @@
     "context_filter": false,
     "batch_processing": true
   },
-  "saved_at": "2025-12-02T18:58:44.421640"
+  "saved_at": "2025-12-07T04:10:06.683893"
 }

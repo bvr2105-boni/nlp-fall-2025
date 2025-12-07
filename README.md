@@ -41,8 +41,7 @@ Applied Text and Natural Language Analytics - Fall 2025 Team Members
 ### 1. Job Data Collection
 - **LinkedIn Job Scraper**: Automated scraping of job postings from LinkedIn
 - **HuggingFace Job Data**: Additional job postings from HuggingFace datasets
-- **70+ Job Titles**: Comprehensive coverage across multiple industries
-- **Structured Data**: Clean CSV format with job details, descriptions, and metadata
+
 
 ### 2. NLP Analysis Tools
 - **Named Entity Recognition (NER)**: Extract skills, technologies, qualifications, and entities
@@ -269,6 +268,8 @@ Scraped data is saved to `scraps/` directory with timestamped filenames: `linked
 - Custom entity types for job-specific information
 
 ![Named Entity Recognition](images/2_NER.png)
+
+![Named Entity By Domain](images/2_NER2.png)
 
 **2. Topic Modeling**
 - LDA (Latent Dirichlet Allocation)

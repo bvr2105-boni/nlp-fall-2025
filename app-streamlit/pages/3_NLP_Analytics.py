@@ -359,6 +359,322 @@ def categorize_skill(skill):
             return category
     return "Other"
 
+# Domain-specific skill mapping (industry/domain classification)
+SKILL_DOMAIN_MAPPING = {
+    # Technology Domain (Tech)
+    "python": "Technology", "aws": "Technology", "agile": "Technology",
+    "machine learning": "Technology", "scrum": "Technology", "kanban": "Technology",
+    "devops": "Technology", "ci/cd": "Technology", "kubernetes": "Technology",
+    "docker": "Technology", "terraform": "Technology", "ansible": "Technology",
+    "microservices": "Technology", "api development": "Technology",
+    "cloud architecture": "Technology", "serverless": "Technology",
+    "react": "Technology", "angular": "Technology", "vue.js": "Technology",
+    "node.js": "Technology", "typescript": "Technology", "javascript": "Technology",
+    "java": "Technology", "c++": "Technology", "c#": "Technology",
+    "sql": "Technology", "nosql": "Technology", "mongodb": "Technology",
+    "postgresql": "Technology", "redis": "Technology", "elasticsearch": "Technology",
+    "data engineering": "Technology", "big data": "Technology", "spark": "Technology",
+    "hadoop": "Technology", "kafka": "Technology", "git": "Technology",
+    "github": "Technology", "azure": "Technology", "gcp": "Technology",
+    "software development": "Technology", "software engineering": "Technology",
+    "full stack development": "Technology", "frontend development": "Technology",
+    "backend development": "Technology", "rest apis": "Technology",
+    "distributed systems": "Technology", "scalable systems": "Technology",
+    "r": "Technology", "scala": "Technology", "go": "Technology",
+    "matlab": "Technology", "bash": "Technology", "shell scripting": "Technology",
+    "php": "Technology", "ruby": "Technology", "swift": "Technology",
+    "kotlin": "Technology", "rust": "Technology", "perl": "Technology",
+    "django": "Technology", "flask": "Technology", "fastapi": "Technology",
+    "react native": "Technology", "next.js": "Technology", "express.js": "Technology",
+    "ruby on rails": "Technology", "spring": "Technology", "laravel": "Technology",
+    "android development": "Technology", "ios development": "Technology",
+    "xcode": "Technology", "android studio": "Technology",
+    "jenkins": "Technology", "github actions": "Technology", "circleci": "Technology",
+    "travis ci": "Technology", "gitlab": "Technology", "bitbucket": "Technology",
+    
+    # Data Science & Analytics Domain
+    "data analysis": "Data Science", "data analytics": "Data Science",
+    "statistical analysis": "Data Science", "business intelligence": "Data Science",
+    "data visualization": "Data Science", "tableau": "Data Science",
+    "power bi": "Data Science", "pandas": "Data Science", "numpy": "Data Science",
+    "pyspark": "Data Science", "excel": "Data Science",
+    "data pipeline": "Data Science", "etl": "Data Science",
+    "data science": "Data Science", "data mining": "Data Science",
+    "predictive modeling": "Data Science", "data warehousing": "Data Science",
+    "deep learning": "Data Science", "neural networks": "Data Science",
+    "xgboost": "Data Science", "random forest": "Data Science",
+    
+    # Finance Domain
+    "financial analysis": "Finance", "risk analysis": "Finance",
+    "financial modeling": "Finance", "fp&a": "Finance", "budgeting": "Finance",
+    "forecasting": "Finance", "accounting": "Finance", "quickbooks": "Finance",
+    "xero": "Finance", "netsuite": "Finance", "sap fico": "Finance",
+    "accounts payable": "Finance", "accounts receivable": "Finance",
+    "general ledger": "Finance", "reconciliation": "Finance",
+    "risk management": "Finance", "portfolio management": "Finance",
+    "investment analysis": "Finance", "credit analysis": "Finance",
+    "derivatives": "Finance", "fixed income": "Finance",
+    "equity research": "Finance", "trading": "Finance",
+    "compliance": "Finance", "audit": "Finance", "cpa": "Finance",
+    "cfa": "Finance", "financial reporting": "Finance",
+    "valuation": "Finance", "mergers and acquisitions": "Finance",
+    "m&a": "Finance", "corporate finance": "Finance",
+    
+    # Healthcare Domain
+    "clinical data analysis": "Healthcare", "healthcare analytics": "Healthcare",
+    "claims processing": "Healthcare", "medical billing": "Healthcare",
+    "hipaa compliance": "Healthcare", "electronic health records": "Healthcare",
+    "patient care": "Healthcare", "clinical trials": "Healthcare",
+    "medical coding": "Healthcare", "icd-10": "Healthcare",
+    "cpt coding": "Healthcare", "ehr": "Healthcare",
+    "emr": "Healthcare", "healthcare administration": "Healthcare",
+    "nursing": "Healthcare", "pharmacy": "Healthcare",
+    "medical research": "Healthcare", "clinical research": "Healthcare",
+    "fda regulations": "Healthcare", "health informatics": "Healthcare",
+    "telemedicine": "Healthcare",
+    
+    # Marketing Domain
+    "digital marketing": "Marketing", "content marketing": "Marketing",
+    "seo": "Marketing", "sem": "Marketing", "ppc": "Marketing",
+    "email marketing": "Marketing", "social media marketing": "Marketing",
+    "marketing automation": "Marketing", "google analytics": "Marketing",
+    "google ads": "Marketing", "facebook ads": "Marketing",
+    "campaign management": "Marketing", "brand strategy": "Marketing",
+    "customer segmentation": "Marketing",
+    "crm": "Marketing", "marketing analytics": "Marketing",
+    "influencer marketing": "Marketing", "adwords": "Marketing",
+    "instagram ads": "Marketing", "linkedin ads": "Marketing",
+    "tiktok ads": "Marketing", "content strategy": "Marketing",
+    "social media management": "Marketing", "community management": "Marketing",
+    "campaign optimization": "Marketing", "social media analytics": "Marketing",
+    "mailchimp": "Marketing", "marketo": "Marketing", "hubspot marketing": "Marketing",
+    "klaviyo": "Marketing", "customer.io": "Marketing", "braze": "Marketing",
+    "google tag manager": "Marketing", "google search console": "Marketing",
+    "seo keyword research": "Marketing", "on-page seo": "Marketing",
+    "technical seo": "Marketing", "crm campaigns": "Marketing",
+    "lifecycle marketing": "Marketing", "marketing funnel analysis": "Marketing",
+    "conversion rate optimization": "Marketing", "ab testing": "Marketing",
+    "landing page optimization": "Marketing", "meta ads manager": "Marketing",
+    
+    # Sales Domain
+    "sales management": "Sales", "account management": "Sales",
+    "business development": "Sales", "lead generation": "Sales",
+    "salesforce": "Sales", "crm management": "Sales",
+    "pipeline management": "Sales", "negotiation": "Sales",
+    "client relations": "Sales", "territory management": "Sales",
+    "sales forecasting": "Sales", "revenue generation": "Sales",
+    "b2b sales": "Sales", "b2c sales": "Sales",
+    "cold calling": "Sales", "cold emailing": "Sales",
+    "account planning": "Sales", "renewal management": "Sales",
+    "upsell strategy": "Sales", "churn analysis": "Sales",
+    
+    # Consulting Domain
+    "management consulting": "Consulting", "strategy consulting": "Consulting",
+    "business consulting": "Consulting", "client engagement": "Consulting",
+    "problem solving": "Consulting", "analytical thinking": "Consulting",
+    "requirements gathering": "Consulting", "gap analysis": "Consulting",
+    "root cause analysis": "Consulting", "workflow automation": "Consulting",
+    "consulting": "Consulting", "advisory": "Consulting",
+    
+    # Education Domain
+    "curriculum development": "Education", "classroom management": "Education",
+    "lesson planning": "Education", "ieps": "Education",
+    "individualized education programs": "Education", "student assessment": "Education",
+    "educational technology": "Education", "pedagogy": "Education",
+    "instructional design": "Education", "academic planning": "Education",
+    "learning management systems": "Education", "lms": "Education",
+    "student engagement": "Education", "differentiated instruction": "Education",
+    "special education": "Education", "educational research": "Education",
+    "assessment design": "Education", "rubric development": "Education",
+    "online learning": "Education", "blended learning": "Education",
+    "distance education": "Education", "student information systems": "Education",
+    "teaching": "Education", "tutoring": "Education", "academic advising": "Education",
+    "course development": "Education", "educational content creation": "Education",
+    "student counseling": "Education", "career counseling": "Education",
+    "educational administration": "Education", "school management": "Education",
+    "learning analytics": "Education", "educational assessment": "Education",
+    
+    # Cosmetics Domain
+    "formulation": "Cosmetics", "r&d": "Cosmetics",
+    "research and development": "Cosmetics", "gmp": "Cosmetics",
+    "good manufacturing practices": "Cosmetics",
+    "market analysis": "Cosmetics", "product development": "Cosmetics",
+    "cosmetic chemistry": "Cosmetics", "regulatory compliance": "Cosmetics",
+    "packaging design": "Cosmetics",
+    "brand management": "Cosmetics", "consumer insights": "Cosmetics",
+    "product testing": "Cosmetics", "safety assessment": "Cosmetics",
+    "ingredient sourcing": "Cosmetics", "sustainability": "Cosmetics",
+    "beauty trends": "Cosmetics", "skincare formulation": "Cosmetics",
+    "makeup development": "Cosmetics", "fragrance development": "Cosmetics",
+    "clinical testing": "Cosmetics", "consumer research": "Cosmetics",
+    
+    # Hospitality & Retail Domain
+    "pos systems": "Hospitality & Retail", "reservation systems": "Hospitality & Retail",
+    "inventory counting": "Hospitality & Retail", "food safety": "Hospitality & Retail",
+    "barista skills": "Hospitality & Retail", "cash handling": "Hospitality & Retail",
+    "customer check-in": "Hospitality & Retail", "front desk operations": "Hospitality & Retail",
+    "event planning": "Hospitality & Retail", "banquet operations": "Hospitality & Retail",
+    "guest relations": "Hospitality & Retail", "store operations": "Hospitality & Retail",
+    "visual merchandising": "Hospitality & Retail", "loss prevention": "Hospitality & Retail",
+    "inventory management": "Hospitality & Retail", "customer service": "Hospitality & Retail",
+    
+    # Construction & Engineering Domain
+    "autocad": "Construction & Engineering", "revit": "Construction & Engineering",
+    "solidworks": "Construction & Engineering", "project bidding": "Construction & Engineering",
+    "site inspection": "Construction & Engineering", "blueprint reading": "Construction & Engineering",
+    "quantity surveying": "Construction & Engineering", "building codes": "Construction & Engineering",
+    "osha compliance": "Construction & Engineering", "pmp": "Construction & Engineering",
+    "primavera p6": "Construction & Engineering", "ms project": "Construction & Engineering",
+    "structural analysis": "Construction & Engineering", "civil engineering design": "Construction & Engineering",
+    "construction management": "Construction & Engineering", "project scheduling": "Construction & Engineering",
+    
+    # Creative & Media Domain
+    "adobe photoshop": "Creative & Media", "adobe illustrator": "Creative & Media",
+    "adobe indesign": "Creative & Media", "adobe premiere pro": "Creative & Media",
+    "after effects": "Creative & Media", "video editing": "Creative & Media",
+    "photo editing": "Creative & Media", "storyboarding": "Creative & Media",
+    "script writing": "Creative & Media", "content strategy": "Creative & Media",
+    "content calendar": "Creative & Media", "social media content creation": "Creative & Media",
+    "graphic design": "Creative & Media", "ui design": "Creative & Media",
+    "ux design": "Creative & Media", "figma": "Creative & Media",
+    "sketch": "Creative & Media", "adobe xd": "Creative & Media",
+    "wireframing": "Creative & Media", "prototyping": "Creative & Media",
+    "user journey mapping": "Creative & Media",
+    
+    # Operations & Supply Chain Domain
+    "supply chain management": "Operations & Supply Chain",
+    "logistics": "Operations & Supply Chain", "procurement": "Operations & Supply Chain",
+    "vendor management": "Operations & Supply Chain",
+    "operations management": "Operations & Supply Chain",
+    "kpi reporting": "Operations & Supply Chain", "route planning": "Operations & Supply Chain",
+    "load optimization": "Operations & Supply Chain", "3pl management": "Operations & Supply Chain",
+    "transportation management systems": "Operations & Supply Chain",
+    "warehouse management": "Operations & Supply Chain", "inventory planning": "Operations & Supply Chain",
+    
+    # Legal & Compliance Domain
+    "contract lifecycle management": "Legal & Compliance",
+    "policy compliance monitoring": "Legal & Compliance", "regulatory compliance": "Legal & Compliance",
+    "gdpr compliance": "Legal & Compliance", "sox compliance": "Legal & Compliance",
+    "kyd": "Legal & Compliance", "kyc": "Legal & Compliance",
+    "aml monitoring": "Legal & Compliance", "anti-money laundering": "Legal & Compliance",
+    "risk assessment": "Legal & Compliance", "internal controls": "Legal & Compliance",
+    "legal research": "Legal & Compliance", "contract negotiation": "Legal & Compliance",
+    
+    # HR & People Domain
+    "performance management": "HR & People", "talent management": "HR & People",
+    "hr analytics": "HR & People", "people analytics": "HR & People",
+    "payroll processing": "HR & People", "time and attendance systems": "HR & People",
+    "recruitment": "HR & People", "talent acquisition": "HR & People",
+    "employee relations": "HR & People", "compensation and benefits": "HR & People",
+    "workday": "HR & People", "hr information systems": "HR & People",
+    
+    # IT Operations & Security Domain
+    "itil framework": "IT Operations & Security", "incident management": "IT Operations & Security",
+    "change management process": "IT Operations & Security", "service desk operations": "IT Operations & Security",
+    "access control": "IT Operations & Security", "identity management": "IT Operations & Security",
+    "network security": "IT Operations & Security", "firewall configuration": "IT Operations & Security",
+    "penetration testing": "IT Operations & Security", "vulnerability assessment": "IT Operations & Security",
+    "siem": "IT Operations & Security", "splunk": "IT Operations & Security",
+    "it service management": "IT Operations & Security", "incident response": "IT Operations & Security",
+    
+    # Language & Communication Domain
+    "translation": "Language & Communication", "interpretation": "Language & Communication",
+    "bilingual communication": "Language & Communication", "multilingual support": "Language & Communication",
+    
+    # Manufacturing Domain
+    "manufacturing": "Manufacturing", "production": "Manufacturing",
+    "quality control": "Manufacturing", "quality assurance": "Manufacturing",
+    "qc": "Manufacturing", "qa": "Manufacturing",
+    "lean manufacturing": "Manufacturing", "six sigma": "Manufacturing",
+    "continuous improvement": "Manufacturing", "kaizen": "Manufacturing",
+    "production planning": "Manufacturing", "production scheduling": "Manufacturing",
+    "manufacturing processes": "Manufacturing", "assembly line": "Manufacturing",
+    "cnc machining": "Manufacturing", "cad": "Manufacturing",
+    "cam": "Manufacturing", "plc programming": "Manufacturing",
+    "industrial engineering": "Manufacturing", "process engineering": "Manufacturing",
+    "manufacturing engineering": "Manufacturing", "production management": "Manufacturing",
+    "shop floor management": "Manufacturing", "machining": "Manufacturing",
+    "welding": "Manufacturing", "fabrication": "Manufacturing",
+    "tooling": "Manufacturing", "mold design": "Manufacturing",
+    "injection molding": "Manufacturing", "3d printing": "Manufacturing",
+    "additive manufacturing": "Manufacturing", "robotics": "Manufacturing",
+    "automation": "Manufacturing", "industrial automation": "Manufacturing",
+    "scada": "Manufacturing", "mrp": "Manufacturing",
+    "mrp systems": "Manufacturing", "erp": "Manufacturing",
+    "erp systems": "Manufacturing", "manufacturing execution systems": "Manufacturing",
+    "mes": "Manufacturing", "iso 9001": "Manufacturing",
+    "iso 14001": "Manufacturing", "as9100": "Manufacturing",
+    "fda regulations": "Manufacturing", "gmp": "Manufacturing",
+    "good manufacturing practices": "Manufacturing", "batch processing": "Manufacturing",
+    "material handling": "Manufacturing", "warehouse operations": "Manufacturing",
+    "inventory control": "Manufacturing", "production optimization": "Manufacturing",
+    "yield improvement": "Manufacturing", "waste reduction": "Manufacturing",
+    "5s methodology": "Manufacturing", "tpm": "Manufacturing",
+    "total productive maintenance": "Manufacturing", "just in time": "Manufacturing",
+    "jit": "Manufacturing", "supply chain optimization": "Manufacturing",
+    
+    # Business Domain
+    "business development": "Business", "strategic planning": "Business",
+    "business strategy": "Business", "business analysis": "Business",
+    "business modeling": "Business", "business intelligence": "Business",
+    "business operations": "Business", "business process": "Business",
+    "process improvement": "Business", "process optimization": "Business",
+    "business process reengineering": "Business", "change management": "Business",
+    "organizational development": "Business", "stakeholder management": "Business",
+    "relationship building": "Business", "networking": "Business",
+    "partnership development": "Business", "alliance management": "Business",
+    "contract management": "Business", "business planning": "Business",
+    "business case development": "Business", "market analysis": "Business",
+    "competitive analysis": "Business", "swot analysis": "Business",
+    "pest analysis": "Business", "market research": "Business",
+    "industry analysis": "Business",
+    "business metrics": "Business", "kpi analysis": "Business",
+    "performance metrics": "Business", "business reporting": "Business",
+    "executive reporting": "Business", "dashboard development": "Business",
+    "presentation skills": "Business", "executive communication": "Business",
+    "cross-functional collaboration": "Business", "team leadership": "Business",
+    "project management": "Business", "program management": "Business",
+    "portfolio management": "Business", "resource management": "Business",
+    "budget management": "Business", "cost management": "Business",
+    "risk management": "Business", "compliance management": "Business",
+    "regulatory compliance": "Business", "business compliance": "Business",
+    "audit": "Business", "internal audit": "Business",
+    "business continuity": "Business", "disaster recovery": "Business",
+    "crisis management": "Business", "business transformation": "Business",
+    "digital transformation": "Business", "innovation management": "Business",
+    "product management": "Business", "product strategy": "Business",
+    "go-to-market": "Business", "gtm strategy": "Business",
+    "market entry": "Business", "market expansion": "Business",
+    "customer success": "Business", "client success": "Business",
+    "account management": "Business", "key account management": "Business",
+    "revenue operations": "Business", "revops": "Business",
+    "sales operations": "Business", "revenue management": "Business",
+    "p&l management": "Business", "profit and loss": "Business",
+    "corporate development": "Business", "mergers and acquisitions": "Business",
+    "m&a": "Business",
+    "due diligence": "Business", "business valuation": "Business",
+    "corporate strategy": "Business", "growth strategy": "Business",
+    "scaling": "Business", "business scaling": "Business",
+    "startup": "Business", "entrepreneurship": "Business",
+    "venture capital": "Business", "private equity": "Business",
+    "investor relations": "Business", "board management": "Business",
+    "corporate governance": "Business", "ethics": "Business",
+    "corporate social responsibility": "Business", "csr": "Business",
+}
+
+def categorize_skill_by_domain(skill):
+    """
+    Categorize a skill into its industry domain.
+    
+    Args:
+        skill: Skill name string
+    
+    Returns:
+        Domain name or "Other"
+    """
+    skill_lower = skill.lower().strip()
+    return SKILL_DOMAIN_MAPPING.get(skill_lower, "Other")
+
 def is_valid_skill_context(doc, start, end, window=10):
     """
     Check if skill match is in valid context (near skill-related keywords).
@@ -1776,6 +2092,25 @@ with tab1:
                             category = categorize_skill(skill)
                             skill_categories[category] += count
                         
+                        # Calculate domain totals from ALL skills (before limiting to top 30)
+                        domain_totals = {}
+                        domain_skills_dict = {}  # Store top 20 skills per domain
+                        
+                        for skill, count in skill_counts.items():
+                            domain = categorize_skill_by_domain(skill)
+                            if domain not in domain_totals:
+                                domain_totals[domain] = 0
+                                domain_skills_dict[domain] = []
+                            domain_totals[domain] += count
+                            domain_skills_dict[domain].append((skill, count))
+                        
+                        # Get top 20 skills per domain
+                        top_skills_by_domain = {}
+                        for domain, skills_list in domain_skills_dict.items():
+                            # Sort by count (descending) and take top 20
+                            sorted_skills = sorted(skills_list, key=lambda x: x[1], reverse=True)
+                            top_skills_by_domain[domain] = sorted_skills[:20]
+                        
                         # Store results
                         st.session_state.ner_results = {
                             'total_entities': len(all_spacy_entities),
@@ -1784,6 +2119,8 @@ with tab1:
                             'skill_counts': skill_counts.most_common(30),
                             'entity_counts': entity_counts.most_common(15),
                             'skill_categories': skill_categories.most_common(),
+                            'domain_totals': domain_totals,  # Full domain totals from all skills
+                            'top_skills_by_domain': top_skills_by_domain,  # Top 20 skills per domain
                             'model_used': model_name,
                             'config': {
                                 'word_boundaries': use_word_boundaries,
@@ -1859,6 +2196,14 @@ with tab1:
                        f"Context Filter: {config['context_filter']} | "
                        f"Batch Processing: {config['batch_processing']}")
             
+            # Create skill_df once and reuse it (prevents duplicate processing)
+            skill_df = None
+            if 'skill_counts' in results and len(results['skill_counts']) > 0:
+                skill_df = pd.DataFrame(results['skill_counts'], columns=['Skill', 'Count'])
+                # Add both domain and category columns at once
+                skill_df['Domain'] = skill_df['Skill'].apply(categorize_skill_by_domain)
+                skill_df['Category'] = skill_df['Skill'].apply(categorize_skill)
+            
             # Skill categories visualization
             if 'skill_categories' in results and results['skill_categories']:
                 st.markdown("**Skills by Category:**")
@@ -1874,13 +2219,258 @@ with tab1:
                 fig_cat.update_xaxes(tickangle=45)
                 st.plotly_chart(fig_cat, use_container_width=True)
             
-            # Top skills
-            if 'skill_counts' in results:
-                st.markdown("**Top Skills:**")
-                skill_df = pd.DataFrame(results['skill_counts'], columns=['Skill', 'Count'])
+            # Domain-specific skill distribution
+            if skill_df is not None and len(skill_df) > 0:
+                st.markdown("**Domain-Specific Skill Distribution:**")
                 
-                # Add category column
-                skill_df['Category'] = skill_df['Skill'].apply(categorize_skill)
+                # Use domain_totals from results if available (full counts from all skills)
+                # Otherwise fall back to aggregating from top 30 skills
+                if 'domain_totals' in results and results['domain_totals']:
+                    # Use full domain totals from all skills
+                    domain_totals_dict = results['domain_totals']
+                    # Count unique skills per domain from skill_df
+                    unique_skills_per_domain = skill_df.groupby('Domain')['Skill'].count().to_dict()
+                    
+                    # Create domain_counts dataframe
+                    domain_list = []
+                    for domain, total_count in sorted(domain_totals_dict.items(), key=lambda x: x[1], reverse=True):
+                        unique_count = unique_skills_per_domain.get(domain, 0)
+                        domain_list.append({
+                            'Domain': domain,
+                            'Total Count': total_count,
+                            'Unique Skills': unique_count
+                        })
+                    domain_counts = pd.DataFrame(domain_list)
+                else:
+                    # Fallback: Aggregate by domain from top 30 skills only
+                    domain_counts = skill_df.groupby('Domain').agg({
+                        'Count': 'sum',
+                        'Skill': 'count'
+                    }).reset_index()
+                    domain_counts.columns = ['Domain', 'Total Count', 'Unique Skills']
+                    domain_counts = domain_counts.sort_values('Total Count', ascending=False)
+                
+                # Create visualization
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Bar chart for total count by domain
+                    fig_domain = px.bar(
+                        domain_counts,
+                        x='Domain',
+                        y='Total Count',
+                        title='Skill Distribution by Domain (Total Mentions)',
+                        color='Total Count',
+                        color_continuous_scale='Purples'
+                    )
+                    fig_domain.update_xaxes(tickangle=45)
+                    fig_domain.update_layout(height=400)
+                    st.plotly_chart(fig_domain, use_container_width=True)
+                
+                with col2:
+                    # Pie chart for domain distribution
+                    fig_pie = px.pie(
+                        domain_counts,
+                        values='Total Count',
+                        names='Domain',
+                        title='Domain Distribution (Percentage)',
+                        hole=0.3
+                    )
+                    fig_pie.update_layout(height=400)
+                    st.plotly_chart(fig_pie, use_container_width=True)
+                
+                # Detailed breakdown by domain with tabs
+                st.markdown("**Top 20 Skills by Domain:**")
+                
+                # Get domains sorted by total count (most popular first)
+                sorted_domains = domain_counts['Domain'].tolist()
+                
+                # Create a lookup dictionary for domain stats
+                domain_stats = {row['Domain']: {'total': row['Total Count'], 'unique': row['Unique Skills']} 
+                               for _, row in domain_counts.iterrows()}
+                
+                # Filter out "Other" domain from main tabs (show it separately if needed)
+                main_domains = [d for d in sorted_domains if d != "Other"]
+                other_domain_list = [d for d in sorted_domains if d == "Other"]
+                
+                # Create tabs for each domain (limit to 15 domains to avoid too many tabs)
+                if len(main_domains) > 0:
+                    # Show up to 15 main domains in tabs
+                    display_domains = main_domains[:15] if len(main_domains) > 15 else main_domains
+                    remaining_domains = main_domains[15:] if len(main_domains) > 15 else []
+                    
+                    # Add "Other" domain if it exists
+                    if other_domain_list:
+                        display_domains = display_domains + other_domain_list
+                    
+                    # Create tab labels with counts
+                    tab_labels = []
+                    for domain in display_domains:
+                        stats = domain_stats[domain]
+                        # Shorten domain names for tab labels if too long
+                        domain_label = domain[:20] + "..." if len(domain) > 20 else domain
+                        tab_labels.append(f"{domain_label} ({stats['total']:,})")
+                    
+                    # Add "More..." tab if there are remaining domains
+                    if remaining_domains:
+                        tab_labels.append("More...")
+                    
+                    domain_tabs = st.tabs(tab_labels)
+                    
+                    # Display skills for each domain tab
+                    for idx, domain in enumerate(display_domains):
+                        with domain_tabs[idx]:
+                            # Get top 20 skills for this domain from saved results (if available)
+                            # Otherwise fall back to filtering from skill_df
+                            if 'top_skills_by_domain' in results and results['top_skills_by_domain']:
+                                if domain in results['top_skills_by_domain']:
+                                    # Use saved top 20 skills per domain
+                                    domain_skills_list = results['top_skills_by_domain'][domain]
+                                    domain_skills = pd.DataFrame(domain_skills_list, columns=['Skill', 'Count'])
+                                else:
+                                    # Domain not in saved results, use empty dataframe
+                                    domain_skills = pd.DataFrame(columns=['Skill', 'Count'])
+                            else:
+                                # Fallback: filter from skill_df (limited to top 30 overall)
+                                domain_skills_df = skill_df[skill_df['Domain'] == domain].copy()
+                                domain_skills = domain_skills_df.sort_values('Count', ascending=False).head(20)
+                            
+                            domain_total = domain_stats[domain]['total']
+                            domain_unique = len(domain_skills) if len(domain_skills) > 0 else 0
+                            
+                            if len(domain_skills) > 0:
+                                # Show domain summary
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.metric("Total Mentions", f"{domain_total:,}")
+                                with col2:
+                                    top_skill = domain_skills.iloc[0]['Skill']
+                                    top_count = domain_skills.iloc[0]['Count']
+                                    st.metric("Top Skill", f"{top_skill} ({top_count:,})")
+                                
+                                # Show top 20 skills list
+                                st.markdown("**Top 20 Skills:**")
+                                skills_list = [(i+1, row['Skill'], row['Count']) 
+                                              for i, (_, row) in enumerate(domain_skills.iterrows())]
+                                # Display in columns for better layout
+                                num_cols = 2
+                                cols = st.columns(num_cols)
+                                items_per_col = (len(skills_list) + num_cols - 1) // num_cols
+                                for col_idx, col in enumerate(cols):
+                                    start_idx = col_idx * items_per_col
+                                    end_idx = min(start_idx + items_per_col, len(skills_list))
+                                    with col:
+                                        for rank, skill, count in skills_list[start_idx:end_idx]:
+                                            st.markdown(f"**{rank}.** {skill} ({count:,})")
+                                
+                                st.markdown("---")
+                                
+                                # Create a bar chart for top skills in this domain
+                                fig_domain_skills = px.bar(
+                                    domain_skills,
+                                    x='Count',
+                                    y='Skill',
+                                    orientation='h',
+                                    title=f'Top 20 Skills in {domain}',
+                                    color='Count',
+                                    color_continuous_scale='Blues',
+                                    height=max(500, len(domain_skills) * 30),
+                                    labels={'Count': 'Number of Mentions', 'Skill': 'Skill Name'}
+                                )
+                                fig_domain_skills.update_layout(
+                                    yaxis={'categoryorder': 'total ascending', 'automargin': True},
+                                    margin=dict(l=160, r=40, t=60, b=40),
+                                    showlegend=False
+                                )
+                                st.plotly_chart(fig_domain_skills, use_container_width=True)
+
+                                
+                                # Show info if there are more skills available
+                                if 'top_skills_by_domain' in results and results['top_skills_by_domain']:
+                                    if domain in results['top_skills_by_domain']:
+                                        total_domain_skills = len(results['top_skills_by_domain'][domain])
+                                        if total_domain_skills >= 20:
+                                            st.caption(f"Showing top 20 of {total_domain_skills} skills in {domain} domain")
+                            else:
+                                st.info(f"No skills found for {domain}")
+                    
+                    # Handle "More..." tab if there are remaining domains
+                    if remaining_domains:
+                        with domain_tabs[-1]:
+                            st.markdown("**Additional Domains:**")
+                            for domain in remaining_domains:
+                                # Get top 20 skills for this domain from saved results (if available)
+                                if 'top_skills_by_domain' in results and results['top_skills_by_domain']:
+                                    if domain in results['top_skills_by_domain']:
+                                        domain_skills_list = results['top_skills_by_domain'][domain]
+                                        domain_skills = pd.DataFrame(domain_skills_list, columns=['Skill', 'Count'])
+                                    else:
+                                        domain_skills = pd.DataFrame(columns=['Skill', 'Count'])
+                                else:
+                                    # Fallback: filter from skill_df
+                                    domain_skills = skill_df[skill_df['Domain'] == domain].sort_values('Count', ascending=False).head(20)
+                                
+                                domain_total = domain_stats[domain]['total']
+                                domain_unique = len(domain_skills) if len(domain_skills) > 0 else 0
+                                
+                                if len(domain_skills) > 0:
+                                    with st.expander(f"**{domain}** ({domain_total:,} mentions, {len(domain_skills)} top skills)"):
+                                        # Show summary metrics
+                                        col1, col2 = st.columns(2)
+                                        with col1:
+                                            st.metric("Total Mentions", f"{domain_total:,}")
+                                        with col2:
+                                            top_skill = domain_skills.iloc[0]['Skill']
+                                            top_count = domain_skills.iloc[0]['Count']
+                                            st.metric("Top Skill", f"{top_skill} ({top_count:,})")
+                                        
+                                        # Show top 20 skills list
+                                        st.markdown("**Top 20 Skills:**")
+                                        skills_list = [(i+1, row['Skill'], row['Count']) 
+                                                      for i, (_, row) in enumerate(domain_skills.iterrows())]
+                                        # Display in columns for better layout
+                                        num_cols = 2
+                                        cols = st.columns(num_cols)
+                                        items_per_col = (len(skills_list) + num_cols - 1) // num_cols
+                                        for col_idx, col in enumerate(cols):
+                                            start_idx = col_idx * items_per_col
+                                            end_idx = min(start_idx + items_per_col, len(skills_list))
+                                            with col:
+                                                for rank, skill, count in skills_list[start_idx:end_idx]:
+                                                    st.markdown(f"**{rank}.** {skill} ({count:,})")
+                                        
+                                        st.markdown("---")
+                                        
+                                        # Show bar chart
+                                        fig = px.bar(
+                                            domain_skills,
+                                            x='Count',
+                                            y='Skill',
+                                            orientation='h',
+                                            title=f'Top 20 Skills in {domain}',
+                                            color='Count',
+                                            color_continuous_scale='Blues',
+                                            height=max(400, len(domain_skills) * 25)
+                                        )
+                                        fig.update_layout(
+                                            yaxis={'categoryorder': 'total ascending', 'automargin': True},
+                                            margin=dict(l=160, r=40, t=60, b=40),
+                                            showlegend=False
+                                        )
+                                        st.plotly_chart(fig, use_container_width=True)
+                                        
+                                        # Show dataframe
+                                        display_df = domain_skills[['Skill', 'Count']].copy()
+                                        display_df.insert(0, 'Rank', range(1, len(display_df) + 1))
+                                        st.dataframe(
+                                            display_df,
+                                            use_container_width=True,
+                                            hide_index=True
+                                        )
+            
+            # Top skills (reuse skill_df created above)
+            if skill_df is not None and len(skill_df) > 0:
+                st.markdown("**Top Skills:**")
                 
                 # Display with tabs for different views
                 tab_skills, tab_categories = st.tabs(["All Skills", "By Category"])
@@ -1915,7 +2505,7 @@ with tab1:
                 st.markdown("**Top Skills Visualization:**")
                 
                 # Limit to top 20 but keep dynamic sizing so all bars stay visible
-                top_skills = results['skill_counts'][:20]
+                top_skills = results['skill_counts']
                 top_skills_df = pd.DataFrame(top_skills, columns=['Skill', 'Count'])
                 bar_height = max(420, len(top_skills_df) * 28)
                 fig_skills = px.bar(
