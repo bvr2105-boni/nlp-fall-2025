@@ -145,15 +145,10 @@ cd nlp-fall-2025
 
 2. **Install spaCy models** (Required for NER functionality)
    
-   **Option A: Using the setup script (Recommended)**
-   ```bash
-   chmod +x setup_spacy_models.sh
-   ./setup_spacy_models.sh
-   ```
-   
-   **Option B: Manual installation**
+   ** Manual installation**
    ```bash
    python -m spacy download en_core_web_sm
+   python -m spacy download en_core_web_md
    python -m spacy download en_core_web_lg  # Optional: Large model for better NER
    ```
    
@@ -229,6 +224,16 @@ jupyter notebook workspace/Word\ Embedding/
 jupyter notebook workspace/Data_Cleaning/
 ```
 
+**Complete Job Analysis:**
+```bash
+jupyter notebook workspace/Final_Job_Anaylsis.ipynb
+```
+This comprehensive notebook includes:
+- Vector search with PostgreSQL
+- Final score calculation for job matching
+- Complete resume evaluation pipeline
+- Integration of all NLP techniques
+
 ## Features Overview
 
 ### LinkedIn Job Scraper
@@ -283,8 +288,13 @@ Scraped data is saved to `scraps/` directory with timestamped filenames: `linked
 **4. Resume Matching**
 - Extract skills from resumes (PDF parsing)
 - Compute similarity scores using embeddings
-- Rank jobs by compatibility
-- Provide match explanations
+- **Comprehensive Final Score Calculation**: Combines semantic, topic, and skill scores
+  - **Semantic Score**: Vector similarity using SBERT or Word2Vec embeddings
+  - **Topic Score**: LSA-based topic modeling similarity
+  - **Skill Score**: Jaccard similarity of extracted skills
+  - **Final Score**: Weighted combination: `avg_ts + (1 - avg_ts) * skill_score` where `avg_ts = (topic_score + semantic_score) / 2`
+- Rank jobs by compatibility using final scores
+- Provide detailed match explanations with breakdown of all scores
 
 ![Resume Matching](images/7_top_matching.png)
 
@@ -297,8 +307,13 @@ Scraped data is saved to `scraps/` directory with timestamped filenames: `linked
 
 **6. Resume Evaluation**
 - Evaluate resume quality and completeness
-- Score resumes against job requirements
-- Provide improvement suggestions
+- **Multi-dimensional Scoring**: Comprehensive evaluation using multiple metrics
+  - Semantic similarity (embedding-based)
+  - Topic modeling similarity (LSA)
+  - Skill matching (Jaccard similarity)
+  - Final composite score combining all metrics
+- Score resumes against job requirements with detailed breakdowns
+- Provide improvement suggestions based on missing skills and score components
 
 ![Resume Evaluation](images/5_evaluation.png)
 
